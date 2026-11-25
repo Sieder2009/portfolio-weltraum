@@ -40,8 +40,7 @@
 
 html,
 body {
-  height: 100%;
-  overflow: hidden;
+  overflow-x: clip;
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-body);
@@ -140,11 +139,18 @@ kbd {
    Stage (WebGL) and overlays
    ========================================================================== */
 
+html.is-loading,
+html.drawer-open,
+html.menu-open {
+  overflow: hidden;
+}
+
 .stage {
   position: fixed;
   inset: 0;
   z-index: 0;
-  touch-action: none;
+  /* vertical swipes scroll the journey, sideways drags turn the view */
+  touch-action: pan-y;
   cursor: grab;
   background:
     radial-gradient(1200px 700px at 70% 30%, rgba(70, 40, 120, 0.25), transparent 70%),
@@ -384,7 +390,8 @@ button.chip:hover,
   transition-delay: calc(var(--i, 0) * 24ms + var(--c-delay, 0ms));
 }
 
-.is-in .c {
+.is-in .c,
+.in .c {
   transform: none;
 }
 
@@ -398,7 +405,8 @@ button.chip:hover,
   transition-delay: calc(var(--d, 0) * 55ms + 120ms);
 }
 
-.is-in [data-r] {
+.is-in [data-r],
+[data-r].in {
   opacity: 1;
   transform: none;
 }
@@ -637,40 +645,195 @@ button.chip:hover,
    Hero (start, around the sun)
    ========================================================================== */
 
-.hero {
-  position: fixed;
+/* The journey runs over the fixed scene: only the text takes clicks, the empty space belongs to the planets. */
+.journey {
+  position: relative;
   z-index: 20;
-  left: 0;
-  bottom: 0;
-  padding: 0 var(--gutter) calc(118px + var(--safe-b));
-  max-width: min(760px, 100vw);
   pointer-events: none;
-  transition:
-    opacity 0.7s var(--ease-out),
-    transform 0.9s var(--ease-out),
-    visibility 0.9s;
 }
 
-.hero::before {
+.hero {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 var(--gutter) calc(118px + var(--safe-b));
+}
+
+.hero-inner {
+  position: relative;
+  max-width: min(720px, 100%);
+}
+
+.hero-inner::before {
   content: "";
   position: absolute;
   z-index: -1;
   left: -20%;
-  right: -30%;
-  bottom: -10%;
-  height: 120%;
+  right: -40%;
+  bottom: -30%;
+  height: 160%;
   background: radial-gradient(ellipse at 30% 70%, rgba(2, 3, 9, 0.78), rgba(2, 3, 9, 0.35) 45%, transparent 72%);
   pointer-events: none;
 }
 
-.hero.is-hidden {
-  opacity: 0;
-  visibility: hidden;
-  transform: translate3d(-24px, 0, 0);
-}
-
 .hero-inner > * {
   pointer-events: auto;
+}
+
+.scroll-cue {
+  position: absolute;
+  right: var(--gutter);
+  bottom: calc(126px + var(--safe-b));
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  writing-mode: vertical-rl;
+  opacity: 0;
+  transition: opacity 1s ease 2.2s;
+}
+
+html:not(.is-loading) .scroll-cue {
+  opacity: 1;
+}
+
+.scroll-cue-line {
+  position: relative;
+  width: 1px;
+  height: 72px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.scroll-cue-line::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent, var(--accent), transparent);
+  animation: cue 2.2s var(--ease-in-out) infinite;
+}
+
+@keyframes cue {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+/* ---------- Travel between planets ---------- */
+
+.travel {
+  position: relative;
+  height: 120vh;
+}
+
+.travel-sign {
+  position: sticky;
+  top: 60vh;
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  width: fit-content;
+  padding: 0 var(--gutter);
+  opacity: 0;
+  translate: 0 calc((1 - var(--p, 0)) * 40px);
+  will-change: opacity, translate;
+}
+
+.ts-kicker,
+.ts-world {
+  font: 500 11.5px/1 var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.ts-name {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  font: 600 clamp(2.2rem, 5.2vw, 4.8rem) / 0.95 var(--font-display);
+  letter-spacing: -0.04em;
+  color: transparent;
+  -webkit-text-stroke: 1px color-mix(in oklab, var(--accent) 70%, #fff);
+  text-shadow: 0 0 40px color-mix(in oklab, var(--accent) 35%, transparent);
+}
+
+.ts-num {
+  font: 500 0.22em/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  -webkit-text-stroke: 0;
+}
+
+.ts-world {
+  color: var(--accent);
+}
+
+/* ---------- A stop: the planet's card, beside the planet ---------- */
+
+.stop-planet {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 var(--gutter);
+}
+
+.stop-card {
+  position: relative;
+  width: var(--card-w, 520px);
+  padding: clamp(28px, 3vw, 44px);
+  border-radius: 30px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(12, 14, 32, 0.74), rgba(6, 7, 18, 0.84));
+  backdrop-filter: blur(24px) saturate(1.35);
+  -webkit-backdrop-filter: blur(24px) saturate(1.35);
+  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.stop-card::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 auto 0;
+  height: 340px;
+  background: radial-gradient(420px 260px at 85% 0%, color-mix(in oklab, var(--accent) 22%, transparent), transparent 70%);
+  pointer-events: none;
+}
+
+.journey-end {
+  height: 40vh;
+}
+
+/* ---------- Project drawer ---------- */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  background: rgba(2, 3, 9, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.6s var(--ease-out),
+    visibility 0.6s;
+}
+
+.scrim.is-on {
+  opacity: 1;
+  visibility: visible;
 }
 
 .hero-title {
@@ -866,16 +1029,16 @@ html:not(.is-loading) .labels {
 }
 
 /* ==========================================================================
-   Panel (side panel on wide screens, bottom sheet on phones)
+   Project drawer (from the right on wide screens, a sheet from below on phones)
    ========================================================================== */
 
 .panel {
   position: fixed;
-  z-index: 30;
+  z-index: 50;
   top: 0;
   right: 0;
   bottom: 0;
-  width: var(--panel-w);
+  width: min(640px, 100vw);
   display: flex;
   flex-direction: column;
   background: linear-gradient(180deg, rgba(12, 14, 32, 0.74), rgba(5, 6, 16, 0.88));
@@ -967,7 +1130,6 @@ html:not(.is-loading) .labels {
 }
 
 .pb-name {
-  margin-left: 10px;
   /* (room above the capitals for umlauts: the box clips) */
   font: 500 12px/1.6 var(--font-mono);
   letter-spacing: 0.1em;
@@ -1866,6 +2028,21 @@ a.tl-link:hover {
     visibility 0.8s;
 }
 
+/* How far along the journey you are. */
+.dock::after {
+  content: "";
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  bottom: 3px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent), color-mix(in oklab, var(--accent) 40%, #fff));
+  transform: scaleX(var(--progress, 0));
+  transform-origin: 0 50%;
+  opacity: 0.8;
+}
+
 html.is-loading .dock {
   opacity: 0;
   transform: translateY(30px);
@@ -2134,20 +2311,6 @@ html.is-loading .dock {
 }
 
 /* ==========================================================================
-   Wide screens: the panel sits on the right, the dock centres in what's left
-   ========================================================================== */
-
-@media (min-width: 900px) {
-  .panel-open .dock {
-    left: calc((100vw - var(--panel-w)) / 2);
-  }
-  /* (the sound and menu buttons stay in the top right corner, above the panel's own bar) */
-  .panel-bar {
-    padding-top: 84px;
-  }
-}
-
-/* ==========================================================================
    Phones and small tablets
    ========================================================================== */
 
@@ -2169,15 +2332,39 @@ html.is-loading .dock {
   }
 
   .hero {
-    right: 0;
-    max-width: none;
-    padding-bottom: calc(100px + var(--safe-b));
+    padding-bottom: calc(96px + var(--safe-b));
   }
 
-  .hero::before {
-    left: -10%;
-    right: -10%;
+  .hero-inner::before {
+    left: -20%;
+    right: -20%;
     background: linear-gradient(180deg, transparent, rgba(2, 3, 9, 0.75) 35%, rgba(2, 3, 9, 0.9));
+  }
+
+  .scroll-cue {
+    display: none;
+  }
+
+  .travel {
+    height: 100vh;
+  }
+
+  .travel-sign {
+    top: 58vh;
+  }
+
+  .ts-name {
+    font-size: clamp(2.2rem, 11vw, 3.4rem);
+  }
+
+  .stop-planet {
+    padding: 0 10px;
+  }
+
+  .stop-card {
+    width: 100%;
+    padding: 24px 20px 28px;
+    border-radius: 24px;
   }
 
   .hero-title {
@@ -2207,42 +2394,21 @@ html.is-loading .dock {
   }
 
   .panel {
-    top: auto;
+    top: calc(44px + env(safe-area-inset-top, 0px));
     left: 0;
     width: auto;
-    height: var(--sheet-h);
     border-left: 0;
     border-top: 1px solid var(--line);
     border-radius: 24px 24px 0 0;
     box-shadow: 0 -30px 60px rgba(0, 0, 0, 0.4);
     transform: translate3d(0, 104%, 0);
     transition:
-      transform 0.9s var(--ease-out),
-      height 0.6s var(--ease-out),
-      visibility 0.9s;
-  }
-
-  .panel.is-full {
-    height: calc(100% - 70px - env(safe-area-inset-top, 0px));
-  }
-
-  .sheet-handle {
-    display: grid;
-    place-items: center;
-    width: 100%;
-    height: 22px;
-    padding-top: 8px;
-  }
-
-  .sheet-handle span {
-    width: 44px;
-    height: 4px;
-    border-radius: 4px;
-    background: rgba(255, 255, 255, 0.26);
+      transform 0.8s var(--ease-out),
+      visibility 0.8s;
   }
 
   .panel-bar {
-    padding: 4px 16px 6px;
+    padding: 14px 16px 6px 20px;
   }
 
   .pb-btn {
@@ -2305,12 +2471,6 @@ html.is-loading .dock {
 
   .mlabel:not(.is-current):not(.is-hover) .mlabel-text {
     opacity: 0;
-  }
-
-  .panel-open .dock {
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(30px);
   }
 
   .menu-link {

@@ -1,4 +1,4 @@
-import { about, projectById, projectsUsing, skillCount, timeline, updated, type Project } from "../content";
+import { about, projectsUsing, skillCount, timeline, updated, type Project } from "../content";
 import type { ImageRef } from "../content/types";
 import { sections, sectionOfProject, type Section } from "../config/sections";
 import { ICON, chars, esc, pad2, prettyUrl } from "./util";
@@ -12,7 +12,7 @@ function head(section: Section, sub: string) {
   return `
     <header class="sec-head" data-r>
       <p class="kicker"><span class="kdot"></span>Planet ${pad2(section.number)} · ${esc(section.world)}</p>
-      <h2 class="sec-title" id="panel-title" tabindex="-1">${chars(section.name)}</h2>
+      <h2 class="sec-title" id="title-${section.slug}" tabindex="-1">${chars(section.name)}</h2>
       ${sub ? `<p class="sec-sub">${esc(sub)}</p>` : ""}
     </header>`;
 }
@@ -22,11 +22,18 @@ function block(title: string, body: string, extraClass = "") {
 }
 
 function nextPlanet(section: Section) {
-  const next = sections[section.number % sections.length];
-  const label = section.number === sections.length ? "Zurück zum Anfang" : "Weiter";
+  const next = sections[section.number];
+  if (!next) {
+    return `
+    <a class="next-planet" href="#/" data-r style="--next:#ffb86b">
+      <span class="np-label">Ende der Reise</span>
+      <span class="np-name"><span class="np-num">00</span>Zurück zur Sonne</span>
+      <span class="np-arrow">${ICON.arrowRight}</span>
+    </a>`;
+  }
   return `
     <a class="next-planet" href="${route(next)}" data-r style="--next:${next.accent}">
-      <span class="np-label">${label}</span>
+      <span class="np-label">Weiterfliegen – oder einfach weiterscrollen</span>
       <span class="np-name"><span class="np-num">${pad2(next.number)}</span>${esc(next.name)}</span>
       <span class="np-arrow">${ICON.arrowRight}</span>
     </a>`;
@@ -171,7 +178,7 @@ function projectsView(section: Section) {
     ${nextPlanet(section)}`;
 }
 
-function projectView(section: Section, p: Project) {
+export function projectView(section: Section, p: Project) {
   const list = section.projects;
   const i = list.indexOf(p);
   const prev = list[(i - 1 + list.length) % list.length];
@@ -300,11 +307,7 @@ function contactView(section: Section) {
     ${nextPlanet(section)}`;
 }
 
-export function sectionView(section: Section, projectId: string | null) {
-  if (projectId) {
-    const p = projectById(projectId);
-    if (p && section.projects.includes(p)) return projectView(section, p);
-  }
+export function sectionView(section: Section) {
   switch (section.kind) {
     case "about":
       return aboutView(section);

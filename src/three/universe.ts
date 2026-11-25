@@ -1,6 +1,10 @@
 import * as THREE from "three";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { PlanetBody, type BodyDef } from "./bodies";
-import { CameraRig, type Frame } from "./cameraRig";
+import { CameraRig, type Frame, type Journey } from "./cameraRig";
 import { Sun } from "./sun";
 import { bakeNebula, createSky, createStars, type StarLayer } from "./sky";
 
@@ -17,9 +21,11 @@ export interface ScreenPoint {
 export interface LabelFrame {
   sun: ScreenPoint;
   planets: ScreenPoint[];
-  /** moons of the planet in focus (empty in the overview) */
+  /** moons of the planet in focus (empty elsewhere) */
   moons: (ScreenPoint & { projectId: string })[];
   focused: number | null;
+  /** 0 in the overview, 1 at a planet */
+  closeness: number;
 }
 
 export interface UniverseOptions {
@@ -30,6 +36,8 @@ export interface UniverseOptions {
   onHover: (t: PickTarget | null) => void;
   onSelect: (t: PickTarget) => void;
   onFrame: (f: LabelFrame) => void;
+  /** runs first in every frame (the smooth scroll ticks here, so the camera reads this frame's position) */
+  beforeFrame?: (time: number) => void;
   onProgress?: (p: number, label: string) => void;
 }
 
@@ -56,6 +64,8 @@ export class Universe {
   readonly rig: CameraRig;
   readonly bodies: PlanetBody[] = [];
   private renderer: THREE.WebGLRenderer;
+  private composer: EffectComposer | null = null;
+  private bloom: UnrealBloomPass | null = null;
   private scene = new THREE.Scene();
   private sun: Sun;
   private sky!: THREE.Mesh;
@@ -74,14 +84,13 @@ export class Universe {
   private lastDowngrade = -Infinity;
   private running = false;
   private pointer = { x: 0, y: 0, inside: false, moved: false };
-  private down: { x: number; y: number; t: number; lastX: number; lastY: number; touch: boolean; dragging: boolean } | null = null;
+  private down: { x: number; y: number; t: number; lastX: number; dragging: boolean } | null = null;
   private hover: PickTarget | null = null;
   private externalHover: PickTarget | null = null;
   private highlightedMoon: string | null = null;
   private frame: Frame = { width: 1, height: 1, offsetX: 0, offsetY: 0, freeWidth: 1, freeHeight: 1 };
   private projected = new THREE.Vector3();
   private labelFrame: LabelFrame;
-  onSwipe: ((dir: 1 | -1) => void) | null = null;
 
   constructor(opts: UniverseOptions) {
     this.opts = opts;
@@ -99,14 +108,14 @@ export class Universe {
     });
     this.renderer.setPixelRatio(this.dpr);
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.1;
+    this.renderer.toneMappingExposure = 1.0;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.setClearColor(0x020309, 1);
 
     this.rig = new CameraRig(window.innerWidth / window.innerHeight);
     this.rig.reducedMotion = opts.reducedMotion;
     this.sun = new Sun(SUN_RADIUS, this.octaves);
-    this.labelFrame = { sun: { x: 0, y: 0, r: 0, visible: false }, planets: [], moons: [], focused: null };
+    this.labelFrame = { sun: { x: 0, y: 0, r: 0, visible: false }, planets: [], moons: [], focused: null, closeness: 0 };
   }
 
   /** Builds the scene step by step (the loader shows the progress). */
@@ -129,15 +138,27 @@ export class Universe {
     progress(0.45, "Planeten");
     this.scene.add(this.sun.group);
     this.scene.add(new THREE.AmbientLight(0x5a6aa0, 0.5));
-    const light = new THREE.PointLight(0xfff0dd, 3.2, 0, 0);
-    this.scene.add(light);
+    this.scene.add(new THREE.PointLight(0xfff0dd, 3.2, 0, 0));
     const moonGeometry = new THREE.SphereGeometry(1, 40, 28);
     this.opts.bodies.forEach((def, i) => {
       const body = new PlanetBody(def, i, { octaves: this.octaves, lowDetail: this.opts.lowPower, moonGeometry });
       this.bodies.push(body);
       this.scene.add(body.pivot);
     });
+    this.rig.setBodies(this.bodies);
     this.labelFrame.planets = this.bodies.map(() => ({ x: 0, y: 0, r: 0, visible: false }));
+
+    // Glow for everything brighter than white: the sun, lava, glowing seams and traces, auroras, bright stars.
+    // (Left out on phones and small machines, where it costs more than it gives.)
+    if (!this.opts.lowPower) {
+      const size = new THREE.Vector2(window.innerWidth, window.innerHeight);
+      const target = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: 4 });
+      this.composer = new EffectComposer(this.renderer, target);
+      this.composer.addPass(new RenderPass(this.scene, this.rig.camera));
+      this.bloom = new UnrealBloomPass(size, 0.55, 0.5, 0.95);
+      this.composer.addPass(this.bloom);
+      this.composer.addPass(new OutputPass());
+    }
     this.resize();
     this.update(0.016);
     await tick();
@@ -148,7 +169,7 @@ export class Universe {
     // (anything left over is compiled with the first frame).
     if (r.compileAsync) await Promise.race([r.compileAsync(this.scene, this.rig.camera), new Promise((res) => setTimeout(res, 6000))]);
     else this.renderer.compile(this.scene, this.rig.camera);
-    this.renderer.render(this.scene, this.rig.camera);
+    this.draw();
     await tick();
     progress(1, "Bereit");
   }
@@ -177,7 +198,6 @@ export class Universe {
       const tilt = new THREE.Group();
       tilt.rotation.z = body.def.tilt;
       const mesh = new THREE.Mesh(body.mesh.geometry, body.mesh.material);
-      mesh.rotation.y = 0.8;
       tilt.add(mesh);
       const atmo = new THREE.Mesh(body.atmosphere.geometry, body.atmosphere.material);
       group.add(tilt, atmo);
@@ -185,7 +205,13 @@ export class Universe {
       const u = body.mesh.material.uniforms;
       u.uSunPos.value.copy(light);
       u.uHover.value = 0;
+      u.uSpin.value = 0;
       body.atmosphere.material.uniforms.uSunPos.value.copy(light);
+      for (const shell of [body.clouds, body.aurora]) {
+        if (!shell) continue;
+        shell.material.uniforms.uSunPos.value.copy(light);
+        tilt.add(new THREE.Mesh(shell.geometry, shell.material));
+      }
       if (body.ring) {
         const ring = new THREE.Mesh(body.ring.geometry, body.ring.material);
         ring.rotation.copy(body.ring.rotation);
@@ -251,20 +277,18 @@ export class Universe {
     this.rig.setFrame(frame);
   }
 
+  setJourney(j: Journey) {
+    this.rig.setJourney(j);
+  }
+
   resize() {
     const w = window.innerWidth;
     const h = window.innerHeight;
     this.renderer.setSize(w, h, false);
+    this.composer?.setPixelRatio(this.dpr);
+    this.composer?.setSize(w, h);
     this.stars.material.uniforms.uPixelRatio.value = this.dpr;
     this.dust.material.uniforms.uPixelRatio.value = this.dpr;
-  }
-
-  /** null = overview */
-  focus(index: number | null) {
-    const body = index === null ? null : this.bodies[index];
-    this.bodies.forEach((b, i) => (b.activeTarget = i === index ? 1 : 0));
-    this.rig.flyTo(body ?? null);
-    this.labelFrame.focused = index;
   }
 
   setExternalHover(t: PickTarget | null) {
@@ -291,45 +315,33 @@ export class Universe {
     if (!isTouch) this.rig.setPointer((x / window.innerWidth) * 2 - 1, -((y / window.innerHeight) * 2 - 1));
     if (this.down) {
       const dx = x - this.down.lastX;
-      const dy = y - this.down.lastY;
       if (!this.down.dragging && Math.hypot(x - this.down.x, y - this.down.y) > 6) this.down.dragging = true;
-      if (this.down.dragging && !(this.down.touch && this.rig.focused)) this.rig.drag(dx, dy);
+      if (this.down.dragging) this.rig.drag(dx);
       this.down.lastX = x;
-      this.down.lastY = y;
     }
   }
 
   pointerDown(x: number, y: number, isTouch: boolean) {
-    this.down = { x, y, t: performance.now(), lastX: x, lastY: y, touch: isTouch, dragging: false };
+    this.down = { x, y, t: performance.now(), lastX: x, dragging: false };
     this.pointerMove(x, y, isTouch);
   }
 
-  pointerUp(x: number, y: number) {
+  pointerUp(x: number, y: number, isTouch: boolean) {
     const d = this.down;
     this.down = null;
-    if (!d) return;
-    const dt = performance.now() - d.t;
-    const dx = x - d.x;
-    const dy = y - d.y;
-    if (!d.dragging && dt < 600) {
-      const hit = this.pick(x, y, d.touch ? 26 : 16);
-      if (hit) this.opts.onSelect(hit);
-      return;
-    }
-    // A quick sideways swipe on a touch screen switches planets while one is in focus.
-    if (d.touch && this.rig.focused && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.4 && dt < 700) {
-      this.onSwipe?.(dx < 0 ? 1 : -1);
-    }
+    if (!d || d.dragging || performance.now() - d.t > 600) return;
+    const hit = this.pick(x, y, isTouch ? 26 : 16);
+    if (hit) this.opts.onSelect(hit);
+  }
+
+  pointerCancel() {
+    this.down = null;
   }
 
   pointerLeave() {
     this.pointer.inside = false;
     this.pointer.moved = true;
     this.rig.setPointer(0, 0);
-  }
-
-  wheel(delta: number) {
-    this.rig.wheel(delta);
   }
 
   // ---------- picking in screen space (generous targets for small planets and fingers) ----------
@@ -378,21 +390,30 @@ export class Universe {
 
   private loop = (timestamp?: number) => {
     this.timer.update(timestamp);
+    this.opts.beforeFrame?.(timestamp ?? performance.now());
     const dt = Math.min(this.timer.getDelta(), 1 / 20);
     this.update(dt);
-    this.renderer.render(this.scene, this.rig.camera);
+    this.draw();
     this.adaptQuality(dt);
   };
 
+  private draw() {
+    if (this.composer) this.composer.render();
+    else this.renderer.render(this.scene, this.rig.camera);
+  }
+
   private update(dt: number) {
     this.time += dt;
-    const focused = this.rig.focused;
-    const targetScale = focused ? 0.12 : this.opts.reducedMotion ? 0.3 : 1;
+    const closeness = this.rig.closeness;
+    // The planets slow down while you're at one (reading), and turn at full speed in the overview.
+    const targetScale = (this.opts.reducedMotion ? 0.3 : 1) * THREE.MathUtils.lerp(1, 0.1, closeness);
     this.timeScale += (targetScale - this.timeScale) * (1 - Math.exp(-dt * 2));
     const sunPos = this.sun.group.position;
+    const focused = this.rig.focusedIndex;
 
     for (const b of this.bodies) {
-      b.setOrbitOpacity(focused ? 0.14 : 0.32);
+      b.setOrbitOpacity(THREE.MathUtils.lerp(0.32, 0.12, closeness));
+      b.activeTarget = this.bodies.indexOf(b) === focused ? 1 : 0;
       b.update(dt, dt * this.timeScale, this.time, sunPos);
     }
     this.rig.update(dt);
@@ -402,6 +423,8 @@ export class Universe {
     this.stars.points.position.copy(cam.position);
     this.stars.material.uniforms.uTime.value = this.time;
 
+    this.labelFrame.focused = focused;
+    this.labelFrame.closeness = closeness;
     this.updateScreen();
     this.updateHover();
     this.opts.onFrame(this.labelFrame);

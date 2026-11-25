@@ -7,6 +7,7 @@ export class Sound {
   private master: GainNode | null = null;
   private noise: AudioBuffer | null = null;
   private lastBlip = 0;
+  private wind: { gain: GainNode; filter: BiquadFilterNode } | null = null;
   enabled = false;
 
   /** The saved choice (only "on" if it was switched on before). */
@@ -113,6 +114,29 @@ export class Sound {
     hissGain.gain.value = 0.01;
     hiss.connect(band).connect(hissGain).connect(this.master);
     hiss.start();
+
+    // Wind of the flight: louder and brighter the faster you scroll.
+    const windSrc = ctx.createBufferSource();
+    windSrc.buffer = this.noise;
+    windSrc.loop = true;
+    const windFilter = ctx.createBiquadFilter();
+    windFilter.type = "bandpass";
+    windFilter.frequency.value = 300;
+    windFilter.Q.value = 1.2;
+    const windGain = ctx.createGain();
+    windGain.gain.value = 0;
+    windSrc.connect(windFilter).connect(windGain).connect(this.master);
+    windSrc.start();
+    this.wind = { gain: windGain, filter: windFilter };
+  }
+
+  /** How fast the camera travels (journey stops per second). */
+  flight(speed: number) {
+    if (!this.enabled || !this.ctx || !this.wind) return;
+    const t = this.ctx.currentTime;
+    const s = Math.min(Math.abs(speed), 3);
+    this.wind.gain.gain.setTargetAtTime(Math.min(s * 0.05, 0.11), t, 0.12);
+    this.wind.filter.frequency.setTargetAtTime(280 + s * 700, t, 0.15);
   }
 
   /** A soft tick for hovering a planet. */

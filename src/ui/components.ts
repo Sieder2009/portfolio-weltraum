@@ -39,8 +39,8 @@ export function renderHero(el: HTMLElement) {
   const firstSection = sections[0];
   const timelineSection = sections.find((s) => s.kind === "timeline");
   const hint = coarsePointer.matches
-    ? "Planet antippen oder unten auswählen"
-    : `<kbd>←</kbd><kbd>→</kbd> Planeten wechseln · <kbd>Esc</kbd> Übersicht · Ziehen dreht das System`;
+    ? "Wischen fliegt zum nächsten Planeten · Planet antippen springt direkt hin"
+    : `Scrollen fliegt zum nächsten Planeten · <kbd>←</kbd><kbd>→</kbd> springen · Ziehen dreht das System`;
   el.innerHTML = `
     <div class="hero-inner">
       <p class="kicker" data-r><span class="kdot"></span>${esc(about.githubName || "Portfolio")} · Portfolio</p>
@@ -60,7 +60,34 @@ export function renderHero(el: HTMLElement) {
         ${timelineSection ? `<a class="btn" href="#/${timelineSection.slug}"><span>Alle Projekte</span></a>` : ""}
       </div>
       <p class="hero-hint" data-r>${hint}</p>
+    </div>
+    <div class="scroll-cue" aria-hidden="true">
+      <span class="scroll-cue-text">${coarsePointer.matches ? "Wischen" : "Scrollen"} zum Losfliegen</span>
+      <span class="scroll-cue-line"></span>
     </div>`;
+}
+
+// ---------- The journey: a stretch of travel, then a stop with its card, per planet ----------
+
+export function renderStops(el: HTMLElement, card: (index: number) => string) {
+  el.insertAdjacentHTML(
+    "beforeend",
+    sections
+      .map(
+        (s, i) => `
+      <div class="travel" data-travel="${s.number}" aria-hidden="true">
+        <div class="travel-sign" style="--accent:${s.accent}">
+          <span class="ts-kicker">Nächster Halt</span>
+          <span class="ts-name"><span class="ts-num">${pad2(s.number)}</span>${esc(s.name)}</span>
+          <span class="ts-world">${esc(s.world)}</span>
+        </div>
+      </div>
+      <section class="stop stop-planet" id="stop-${s.slug}" data-stop="${s.number}" style="--accent:${s.accent}" aria-labelledby="title-${s.slug}">
+        <div class="stop-card">${card(i)}</div>
+      </section>`,
+      )
+      .join("") + `<div class="journey-end" aria-hidden="true"></div>`,
+  );
 }
 
 // ---------- Dock: one button per planet ----------
@@ -113,6 +140,7 @@ export class Labels {
   private planets: HTMLButtonElement[] = [];
   private moons = new Map<string, HTMLAnchorElement>();
   private focused: number | null = null;
+  private overview = true;
 
   constructor(
     private el: HTMLElement,
@@ -148,11 +176,14 @@ export class Labels {
     });
   }
 
-  setFocused(index: number | null) {
-    this.focused = index;
-    this.el.classList.toggle("is-focus", index !== null);
-    this.planets.forEach((b) => (b.tabIndex = index === null ? 0 : -1));
-    const ids = new Set(index !== null ? sections[index].projects.map((p) => p.id) : []);
+  /** Planet labels belong to the overview; moon labels to the planet the camera is at. */
+  private setState(focused: number | null, overview: boolean) {
+    if (focused === this.focused && overview === this.overview) return;
+    this.focused = focused;
+    this.overview = overview;
+    this.el.classList.toggle("is-focus", !overview);
+    this.planets.forEach((b) => (b.tabIndex = overview ? 0 : -1));
+    const ids = new Set(focused !== null ? sections[focused].projects.map((p) => p.id) : []);
     this.moons.forEach((a, id) => {
       const on = ids.has(id);
       a.classList.toggle("is-on", on);
@@ -170,12 +201,22 @@ export class Labels {
     this.moons.forEach((a, id) => a.classList.toggle("is-hover", id === moon));
   }
 
+  /** Right edge of the free space beside the cards (labels past it turn to the left). */
+  private planetRight = Infinity;
+
+  setPlanetRight(px: number) {
+    this.planetRight = px;
+  }
+
   update(frame: LabelFrame) {
-    // Near the right edge the text goes to the left of its planet, so it never runs off the screen.
-    const flipAt = window.innerWidth - 190;
+    this.setState(frame.focused, frame.closeness < 0.35);
+    // Near the right edge (of the screen, or of the space left beside the card) the text goes to the left of
+    // its planet, so it never runs off the screen or under the card.
+    const right = frame.closeness > 0.5 ? Math.min(this.planetRight, window.innerWidth) : window.innerWidth;
+    const flipAt = right - 170;
     frame.planets.forEach((p, i) => {
       const b = this.planets[i];
-      const show = p.visible && this.focused === null;
+      const show = p.visible && this.overview;
       b.style.transform = `translate3d(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px, 0)`;
       b.style.setProperty("--d", `${Math.max(p.r * 2 + 14, 28).toFixed(1)}px`);
       b.classList.toggle("is-hidden", !show);

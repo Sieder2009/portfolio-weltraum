@@ -13,7 +13,7 @@
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
   </head>
   <body>
-    <a class="skip-link" href="#panel">Zum Inhalt springen</a>
+    <a class="skip-link" href="#/ueber-mich">Zum Inhalt springen</a>
 
     <div id="stage" class="stage" aria-hidden="true">
       <canvas id="webgl"></canvas>
@@ -25,12 +25,15 @@
 
     <header id="topbar" class="topbar"></header>
 
-    <main>
-      <section id="hero" class="hero" aria-labelledby="hero-title"></section>
-      <aside id="panel" class="panel" aria-labelledby="panel-title"></aside>
+    <!-- The journey: the start, then a stretch of travel and a stop per planet (rendered by the app). -->
+    <main id="journey" class="journey">
+      <section id="hero" class="hero stop" data-stop="0" aria-labelledby="hero-title"></section>
     </main>
 
     <nav id="dock" class="dock" aria-label="Planeten"></nav>
+
+    <div id="scrim" class="scrim" aria-hidden="true"></div>
+    <aside id="panel" class="panel" role="dialog" aria-modal="true" aria-labelledby="panel-title"></aside>
 
     <div id="menu" class="menu" role="dialog" aria-modal="true" aria-label="Navigation" hidden></div>
 

@@ -3,6 +3,9 @@
 Mein Portfolio als interaktives Sonnensystem. Die Sonne ist der Start, jeder Bereich ist ein eigener Planet
 mit eigener Oberfläche, Atmosphäre und Umlaufbahn, und jedes Projekt ist ein Mond seines Planeten.
 
+Die Seite ist eine Reise: Beim Scrollen fliegt die Kamera von der Sonne zum ersten Planeten, kommt ihm näher,
+während sein Inhalt daneben vorbeizieht, und fliegt beim Weiterscrollen zum nächsten.
+
 | Nr. | Planet            | Welt         | Inhalt                                              |
 | --- | ----------------- | ------------ | --------------------------------------------------- |
 | 00  | Start             | Sonne        | Name, Begrüßung, Intro                              |
@@ -15,9 +18,10 @@ mit eigener Oberfläche, Atmosphäre und Umlaufbahn, und jedes Projekt ist ein M
 | 07  | Zeitleiste        | Ringplanet   | Alle Projekte nach Zeitraum, neueste zuerst         |
 | 08  | Kontakt           | Eiswelt      | Links und Minecraft-Name                            |
 
-Gebaut mit [Vite](https://vite.dev), TypeScript und [three.js](https://threejs.org). Alle Planeten, die Sonne,
-der Nebel und die Sterne entstehen in eigenen GLSL-Shadern: Es gibt keine Bild- oder Modelldateien, die geladen
-werden müssen. Schriften (Unbounded, Inter, JetBrains Mono) werden über npm installiert und lokal ausgeliefert.
+Gebaut mit [Vite](https://vite.dev), TypeScript, [three.js](https://threejs.org) und [Lenis](https://lenis.darkroom.engineering)
+(sanftes Scrollen). Alle Planeten, Wolken, Polarlichter, Ringe, die Sonne, der Nebel und die Sterne entstehen in
+eigenen GLSL-Shadern, mit Bloom für alles, was leuchtet: Es gibt keine Bild- oder Modelldateien, die geladen werden
+müssen. Schriften (Unbounded, Inter, JetBrains Mono) werden über npm installiert und lokal ausgeliefert.
 
 ## Lokal starten
 
@@ -100,16 +104,16 @@ greifen nur bei genau diesen Originalsätzen. Ändert sich der Text in der Datei
 
 ## Bedienung
 
-| Eingabe                    | Wirkung                                    |
-| -------------------------- | ------------------------------------------ |
-| Klick / Tippen auf Planet  | zum Planeten fliegen                       |
-| Klick auf Mond             | Projekt öffnen                             |
-| `←` `→`                    | vorheriger / nächster Planet               |
-| `0` – `8`                  | Start bzw. Planet direkt                   |
-| `Esc`                      | Projekt schließen bzw. zurück zur Übersicht |
-| `M`                        | Menü                                       |
-| Ziehen / Mausrad           | System drehen / zoomen                     |
-| Wischen (Handy)            | nächster / vorheriger Planet               |
+| Eingabe                        | Wirkung                                          |
+| ------------------------------ | ------------------------------------------------ |
+| Scrollen / Wischen             | weiterfliegen: näher an den Planeten, dann zum nächsten |
+| Klick / Tippen auf Planet, Dock | direkt dorthin fliegen                          |
+| Klick auf Mond oder Projektkarte | Projekt öffnen (Schublade rechts bzw. unten)   |
+| `←` `→`                        | vorheriger / nächster Planet                     |
+| `0` – `8`                      | Start bzw. Planet direkt                         |
+| `Esc`                          | Projekt schließen bzw. zurück zum Start          |
+| `M`                            | Menü                                             |
+| Seitwärts ziehen               | System bzw. Blick um den Planeten drehen         |
 
 Ton ist standardmäßig aus und lässt sich oben rechts einschalten (die Klänge werden live per Web Audio erzeugt).
 
@@ -117,10 +121,12 @@ Ton ist standardmäßig aus und lässt sich oben rechts einschalten (die Klänge
 
 - Alle Inhalte sind normales HTML (Überschriften, Listen, Links), die 3D-Szene ist nur Kulisse.
 - Tastatur-Navigation mit sichtbarem Fokus, Sprunglink zum Inhalt, Menü mit Fokusfalle.
-- „Bewegung reduzieren“ im System wird beachtet: keine Kamerafahrten, keine Buchstaben-Animationen.
+- „Bewegung reduzieren“ im System wird beachtet: kein sanftes Nachgleiten, Sprünge statt Flüge, keine
+  Buchstaben-Animationen.
 - Ohne WebGL bleibt die Seite vollständig nutzbar (Sternenhimmel in CSS, Planeten im Dock als Farbverläufe).
 - Ein gemeinsames Shader-Programm für alle Planeten und Monde, Nebel nur einmal beim Start berechnet.
-- Die Auflösung passt sich der Bildrate an. Im Hintergrund-Tab wird nicht gerendert.
+- Bloom nur auf Rechnern mit genug Leistung (nicht auf Handys). Die Auflösung passt sich der Bildrate an.
+  Im Hintergrund-Tab wird nicht gerendert.
 
 ## Projektstruktur
 
@@ -135,7 +141,7 @@ src/
   content/                 Daten aus der Textdatei, Zeitleiste, Skill-Zuordnung
   config/sections.ts       die acht Planeten: Name, Farbe, Oberfläche, Umlaufbahn
   three/                   3D: Shader, Planeten, Monde, Sonne, Himmel, Kamera
-  ui/                      Oberfläche: Hero, Panel, Dock, Labels, Menü, Ton, Routing
+  ui/                      Oberfläche: Scroll-Reise, Hero, Karten, Projekt-Schublade, Dock, Labels, Menü, Ton
   styles/main.css          Gestaltung
 public/                    statische Dateien (Favicon, Projektbilder unter assets/)
 ```
