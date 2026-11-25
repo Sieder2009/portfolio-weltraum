@@ -48,7 +48,7 @@ void main() {
   float rays = pow(0.5 + 0.5 * snoise(vec3(cos(a) * 3.0, sin(a) * 3.0, uTime * 0.06)), 3.0);
   rays *= smoothstep(1.0, 0.25, r) * smoothstep(uCore * 0.9, uCore * 1.6, r);
   float fade = smoothstep(1.0, 0.6, r);
-  vec3 col = vec3(1.0, 0.62, 0.28) * glow * 1.05 + vec3(1.0, 0.5, 0.2) * rays * 0.26;
+  vec3 col = vec3(1.0, 0.62, 0.28) * glow * 0.85 + vec3(1.0, 0.5, 0.2) * rays * 0.2;
   col *= fade * uIntensity;
   gl_FragColor = vec4(col, 1.0);
   #include <tonemapping_fragment>
@@ -101,7 +101,9 @@ export class Sun {
     this.surface.uniforms.uTime.value = time;
     this.surface.uniforms.uHover.value = this.hover;
     this.corona.material.uniforms.uTime.value = time;
-    this.corona.material.uniforms.uIntensity.value = 1 + this.hover * 0.35;
+    // Close by, the glow would cover the whole view in a brown haze: it fades as the camera comes near.
+    const near = THREE.MathUtils.smoothstep(camera.position.distanceTo(this.group.position), this.radius * 4, this.radius * 14);
+    this.corona.material.uniforms.uIntensity.value = (1 + this.hover * 0.35) * near;
     this.corona.quaternion.copy(camera.quaternion);
   }
 }

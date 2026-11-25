@@ -64,6 +64,17 @@ float fbm(vec3 p) {
   return sum;
 }
 
+// Three octaves, for lookups that run several times per pixel.
+float fbm3(vec3 p) {
+  return 0.5 * snoise(p) + 0.25 * snoise(p * 2.03 + vec3(17.1, -3.7, 9.2)) + 0.125 * snoise(p * 4.12 + vec3(-5.3, 8.1, 2.2));
+}
+
+vec3 rotY(vec3 p, float a) {
+  float c = cos(a);
+  float s = sin(a);
+  return vec3(c * p.x + s * p.z, p.y, -s * p.x + c * p.z);
+}
+
 float hash13(vec3 p) {
   p = fract(p * 0.1031);
   p += dot(p, p.zyx + 31.32);
@@ -102,10 +113,27 @@ vec3 worley(vec3 p) {
 
 // Ring density across the ring (0 inner edge, 1 outer edge), shared by the ring and the shadow it casts.
 float ringDensity(float r) {
-  float b = 0.55 + 0.45 * snoise(vec3(r * 22.0, 1.7, 3.1));
-  b *= smoothstep(0.0, 0.06, r) * smoothstep(1.0, 0.86, r);
-  b *= 1.0 - 0.9 * exp(-pow((r - 0.64) / 0.025, 2.0));
+  float b = 0.55 + 0.3 * snoise(vec3(r * 22.0, 1.7, 3.1)) + 0.15 * snoise(vec3(r * 95.0, 4.2, 1.0));
+  b *= smoothstep(0.0, 0.05, r) * smoothstep(1.0, 0.88, r);
+  b *= 1.0 - 0.93 * exp(-pow((r - 0.62) / 0.028, 2.0));
+  b *= 1.0 - 0.7 * exp(-pow((r - 0.86) / 0.007, 2.0));
+  b *= mix(1.0, 0.55, smoothstep(0.62, 0.68, r));
   return clamp(b, 0.0, 1.0);
+}
+
+// Clouds, shared by the cloud shell and the shadow it casts on the ground. Blocky = sampled on a block grid.
+float cloudDensity(vec3 q, float t, float seed, float blocky) {
+  vec3 r = rotY(q, t);
+  if (blocky > 0.5) {
+    vec3 a = abs(r);
+    vec3 cube = r / max(a.x, max(a.y, a.z));
+    r = normalize((floor(cube * 7.0) + 0.5) / 7.0);
+    return step(0.3, fbm3(r * 2.2 + 9.0 + seed));
+  }
+  vec3 w = vec3(snoise(r * 1.4 + seed + 2.0), snoise(r * 1.4 + seed + 7.0), snoise(r * 1.4 + seed + 4.0));
+  float c = fbm(r * 2.4 + w * 0.45 + seed + 31.0);
+  c += 0.12 * sin(r.y * 9.0 + c * 3.0);
+  return smoothstep(0.04, 0.5, c);
 }
 `;
 

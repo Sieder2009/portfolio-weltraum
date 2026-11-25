@@ -1,5 +1,12 @@
 import * as THREE from "three";
-import { createAtmosphereMaterial, createRingMaterial, createSurfaceMaterial, type SurfaceKind } from "./materials";
+import {
+  createAtmosphereMaterial,
+  createAuroraMaterial,
+  createCloudMaterial,
+  createRingMaterial,
+  createSurfaceMaterial,
+  type SurfaceKind,
+} from "./materials";
 
 export interface BodyDef {
   key: string;
@@ -9,10 +16,16 @@ export interface BodyDef {
   colors: string[];
   atmo: string;
   atmoStrength: number;
+  /** how much haze and rim light the atmosphere adds over the surface */
+  haze: number;
+  /** warm glow along the terminator, in the halo */
+  sunset: number;
   accent: string;
   seed: number;
   tilt: number;
   ring?: { inner: number; outer: number; colors: string[]; tilt: number };
+  clouds?: { speed: number; blocky: boolean; opacity: number };
+  aurora?: [string, string];
   crystals?: number;
   /** project ids, one moon each */
   moons: string[];
@@ -54,6 +67,7 @@ export class Moon {
       kind: "moon",
       colors: [mixHex("#34343c", accent, 0.22), mixHex("#b9b9c4", accent, 0.3)],
       atmo: accent,
+      haze: 0.25,
       seed: index * 7.3 + planetRadius,
       octaves: Math.min(octaves, 4),
     });
@@ -108,6 +122,8 @@ export class PlanetBody {
   readonly mesh: THREE.Mesh<THREE.SphereGeometry, THREE.ShaderMaterial>;
   readonly atmosphere: THREE.Mesh<THREE.SphereGeometry, THREE.ShaderMaterial>;
   readonly ring?: THREE.Mesh<THREE.RingGeometry, THREE.ShaderMaterial>;
+  readonly clouds?: THREE.Mesh<THREE.SphereGeometry, THREE.ShaderMaterial>;
+  readonly aurora?: THREE.Mesh<THREE.SphereGeometry, THREE.ShaderMaterial>;
   readonly crystals?: THREE.InstancedMesh;
   readonly moons: Moon[] = [];
   readonly orbitLine: THREE.LineLoop<THREE.BufferGeometry, THREE.ShaderMaterial>;
@@ -144,17 +160,33 @@ export class PlanetBody {
 
     this.mesh = new THREE.Mesh(
       new THREE.SphereGeometry(def.radius, ws, hs),
-      createSurfaceMaterial({ kind: def.kind, colors: def.colors, atmo: def.atmo, seed: def.seed, octaves: opts.octaves }),
+      createSurfaceMaterial({ kind: def.kind, colors: def.colors, atmo: def.atmo, haze: def.haze, seed: def.seed, octaves: opts.octaves }),
     );
     this.tilt.add(this.mesh);
 
     const atmoScale = def.kind === "gas" ? 1.1 : 1.14;
     this.atmosphere = new THREE.Mesh(
       new THREE.SphereGeometry(def.radius * atmoScale, 64, 48),
-      createAtmosphereMaterial(def.atmo, def.atmoStrength, atmoScale),
+      createAtmosphereMaterial(def.atmo, def.atmoStrength, atmoScale, def.sunset),
     );
     this.atmosphere.renderOrder = 1;
     this.holder.add(this.atmosphere);
+
+    if (def.clouds) {
+      this.clouds = new THREE.Mesh(
+        new THREE.SphereGeometry(def.radius * (def.clouds.blocky ? 1.035 : 1.014), ws, hs),
+        createCloudMaterial({ seed: def.seed, speed: def.clouds.speed, blocky: def.clouds.blocky, opacity: def.clouds.opacity, octaves: opts.octaves }),
+      );
+      this.clouds.renderOrder = 2;
+      this.tilt.add(this.clouds);
+      this.mesh.material.uniforms.uCloudShadow.value = 1;
+    }
+
+    if (def.aurora) {
+      this.aurora = new THREE.Mesh(new THREE.SphereGeometry(def.radius * 1.07, 96, 64), createAuroraMaterial(def.aurora, def.seed));
+      this.aurora.renderOrder = 2;
+      this.tilt.add(this.aurora);
+    }
 
     // (small planets without moons still leave some space around them)
     let frame = Math.max(def.radius * 1.3, 2.1);
@@ -263,6 +295,18 @@ export class PlanetBody {
     u.uTime.value = time;
     u.uSunPos.value.copy(sunPos);
     u.uHover.value = this.hover;
+    u.uSpin.value = this.mesh.rotation.y;
+
+    if (this.clouds) {
+      const cu = this.clouds.material.uniforms;
+      cu.uTime.value = time;
+      cu.uSunPos.value.copy(sunPos);
+    }
+    if (this.aurora) {
+      const xu = this.aurora.material.uniforms;
+      xu.uTime.value = time;
+      xu.uSunPos.value.copy(sunPos);
+    }
 
     const au = this.atmosphere.material.uniforms;
     au.uSunPos.value.copy(sunPos);
