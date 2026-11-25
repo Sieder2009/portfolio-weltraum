@@ -1,0 +1,904 @@
+{
+  "updated": "25.11.2026",
+  "about": {
+    "name": "Thomas Johann Sieder",
+    "githubName": "Sieder2009",
+    "siteTitle": "Thomas Johann Sieder – Portfolio",
+    "greeting": "Willkommen auf meinen Inseln!",
+    "intro": "Flutter-Apps, Web & Minecraft: Hier sind meine Projekte – jede Insel ist eines davon.",
+    "text": [
+      "Jede Insel in der 3D-Welt ist eines meiner Projekte – die Schnellansicht zeigt alle auf einen Blick."
+    ],
+    "facts": [
+      {
+        "label": "GitHub",
+        "value": "Sieder2009 (seit Februar 2024)"
+      },
+      {
+        "label": "Schwerpunkte",
+        "value": "Flutter-Apps, Web & Minecraft"
+      },
+      {
+        "label": "Aktuelles Projekt",
+        "value": "Kilo"
+      },
+      {
+        "label": "Facharbeit",
+        "value": "Gameboy mit Raspberry Pi (2026/27, Fachbezug IKE)"
+      },
+      {
+        "label": "Minecraft-Name",
+        "value": "affenmal"
+      }
+    ],
+    "skills": [
+      {
+        "group": "Apps",
+        "items": [
+          "Flutter",
+          "Dart"
+        ]
+      },
+      {
+        "group": "Web",
+        "items": [
+          "JavaScript",
+          "React",
+          "three.js",
+          "Vite",
+          "HTML",
+          "CSS",
+          "Node.js"
+        ]
+      },
+      {
+        "group": "Minecraft & Grafik",
+        "items": [
+          "Java",
+          "GLSL"
+        ]
+      },
+      {
+        "group": "Werkzeuge",
+        "items": [
+          "Git",
+          "GitHub",
+          "GitHub Actions",
+          "Vercel",
+          "VS Code"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "GitHub",
+        "url": "https://github.com/Sieder2009"
+      },
+      {
+        "label": "Minecraft-Portfolio",
+        "url": "https://mc.siggidy.dev"
+      },
+      {
+        "label": "Kilo",
+        "url": "https://kilo.siggidy.dev"
+      }
+    ],
+    "images": [
+      {
+        "alt": "Profil-Header von GitHub: Sieder – Flutter-Apps, Web & Minecraft",
+        "src": "assets/about/github-header-light.svg",
+        "available": false
+      }
+    ]
+  },
+  "projects": [
+    {
+      "id": "kilo",
+      "number": 1,
+      "title": "Kilo (ehemals Ironpeak Fitness)",
+      "shortTitle": "Kilo",
+      "subtitle": "ehemals Ironpeak Fitness",
+      "category": "App",
+      "period": "Aug. 2026 – Nov. 2026",
+      "start": "2026-08",
+      "status": "Verteilt über GitHub Releases, nicht über Play Store oder App Store (Stand Nov. 2026: Version v2.20.0).",
+      "summary": "Trainingsplaner und Krafttracker als Flutter-App für Android, iOS, Windows und macOS. Alle Daten bleiben auf dem Gerät: keine Cloud, kein Konto, kein Tracking.",
+      "description": [
+        "Kilo ist eine einzige Flutter-Codebasis für Android, iOS, Windows und macOS mit drei Haupt-Tabs: Training, Kraft und Übungen. Der Startbildschirm zeigt einen Trainingskalender im GitHub-Stil, einen Kreatin-Tracker und den Plan für heute; geführte Workouts erfassen Satz für Satz mit RPE oder RIR, Pausen-Timer und Supersätzen. Im Kraft-Tab bekommen Bankdrücken, Kreuzheben und Kniebeuge spielerische Ränge von Mortal bis Olympian, dazu Bestleistungen, Trends, DOTS-Score, Körpermaße sowie 1RM-, Scheiben- und Kalorienrechner. Die Übungsdatenbank umfasst 546 Übungen mit Muskel-Diagrammen. Für jede Übung mit Verlauf schlägt die App vor, was man nächstes Mal versuchen sollte. Die Daten liegen lokal in SQLite; Builds für alle vier Plattformen entstehen per GitHub Actions und werden über GitHub Releases verteilt. Dazu gibt es eine eigene Website, die die App in Deutsch und Englisch vorstellt. Das Projekt begann am 04.08.2026 als Svelte-Web-App unter dem Namen Ironpeak Fitness, wurde ab 06.08.2026 nach Flutter portiert und am 19.10.2026 in Kilo umbenannt. Mitentwickelt mit Plattnericus, der in den Credits der README genannt wird und laut Commit-Historie einen großen Teil der Commits beigetragen hat. Die Muskel-Figur in den Diagrammen stammt aus react-native-body-highlighter (MIT)."
+      ],
+      "tech": [
+        "Flutter",
+        "Dart",
+        "SQLite (sqflite)",
+        "provider",
+        "fl_chart",
+        "Lokalisierung (10 Sprachen)",
+        "GitHub Actions",
+        "GitHub Releases",
+        "Website: HTML",
+        "CSS",
+        "JavaScript (Vercel)"
+      ],
+      "features": [
+        "Startbildschirm mit Trainingskalender im GitHub-Stil, Kreatin-Tracker und dem Plan für heute",
+        "Animierte Flamme für die Trainingsserie; Ruhetage aus dem Plan unterbrechen die Serie nicht",
+        "Trainingspläne nach Wochentag oder Rotation: von Hand anlegen, aus eigenem Log importieren oder aus acht Vorlagen wählen",
+        "Trainingspläne per KI: Die App kopiert eine Anleitung für einen beliebigen KI-Chat und übernimmt den fertigen Plan per Einfügen",
+        "Geführte Workouts mit RPE oder RIR, Pausen-Timer mit Push-Benachrichtigung, Supersätzen sowie Zeit-, Cardio- und einseitigen Übungen",
+        "Vorschläge für das nächste Training (Doppelte Progression), die ihre Begründung gleich mitliefern",
+        "Ränge für Bankdrücken, Kreuzheben und Kniebeuge (Mortal bis Olympian) mit animierten Kristall-Abzeichen",
+        "PRs, Körpergewicht, Körpermaße mit Trend- und Radar-Diagrammen, DOTS-Score und Kraft-Balance-Check",
+        "Rechner für 1RM, Hantelscheiben und Kalorien/Makros",
+        "Datenbank mit 546 Übungen, Muskel-Aktivierungs-Diagrammen (Vorder- und Rückseite) und Demo-Animationen für 354 Übungen"
+      ],
+      "links": [
+        {
+          "label": "Website",
+          "url": "https://kilo.siggidy.dev"
+        },
+        {
+          "label": "GitHub",
+          "url": "https://github.com/Sieder2009/GymTracker"
+        },
+        {
+          "label": "Releases",
+          "url": "https://github.com/Sieder2009/GymTracker/releases"
+        }
+      ],
+      "images": [
+        {
+          "alt": "Startbildschirm von Kilo im hellen Modus: Trainingskalender in Blautönen, Kreatin-Tracker und Wochentags-Auswahl mit dem Push-Pull-Legs-Plan (Demo-Daten)",
+          "src": "assets/projects/ironpeak-fitness/training-start.png",
+          "available": false
+        },
+        {
+          "alt": "Kraft-Tab von Kilo: Gesamtrang „Demigod III“ mit türkisem Kristall-Abzeichen und Verlauf des Körpergewichts (Demo-Daten)",
+          "src": "assets/projects/ironpeak-fitness/kraft-rang.png",
+          "available": false
+        },
+        {
+          "alt": "Übungsdatenbank von Kilo mit 546 Übungen, Suchfeld, Kategorie-Filtern und kleinen Muskel-Diagrammen (Demo-Daten)",
+          "src": "assets/projects/ironpeak-fitness/uebungen.png",
+          "available": false
+        },
+        {
+          "alt": "Kreuzheben-Seite von Kilo im dunklen Modus: Rang „Demigod II“, violettes Trend-Diagramm und Verlauf der Bestleistungen (Demo-Daten)",
+          "src": "assets/projects/ironpeak-fitness/kreuzheben-dunkel.webp",
+          "available": false
+        }
+      ],
+      "metrics": [],
+      "palette": [],
+      "circuits": [],
+      "missing": [
+        "Was ich gelernt habe"
+      ],
+      "extra": []
+    },
+    {
+      "id": "gym-stats",
+      "number": 2,
+      "title": "GYM STATS",
+      "shortTitle": "GYM STATS",
+      "subtitle": "",
+      "category": "Website · Trainings-Archiv",
+      "period": "Sep. 2026 – Okt. 2026 (Trainingsdaten: Jul. – Dez. 2024)",
+      "start": "2026-09",
+      "status": "Repository privat; die frühere GitHub-Pages-Adresse ist derzeit offline.",
+      "summary": "Trainings-Archiv als Website: sechs Versionen des eigenen Trainingsplans (v2 bis v7) mit jedem geloggten Satz und dem Fortschritt in Zahlen und Diagrammen, aus den Trainings-Logs von Juli bis Dezember 2024.",
+      "description": [
+        "Die Seite sammelt sechs Versionen des Trainingsplans, vom ersten Push/Pull/Legs-Split (v2.0 Grundlagen) bis zum Powerlifting-Protokoll (v7.0 Detaillierung). Oben stehen die Bestwerte: Squat 110 kg, Bench 77,5 kg, Deadlift 125 kg und Trizeps-PR 37,5 kg. Zwei interaktive SVG-Kurven zeigen den Squat- und den Trizeps-Fortschritt, jeder Punkt hat einen Tooltip und jede Kurve gibt es auch als Tabelle. Zu jedem Plan gibt es alle geloggten Sätze, inklusive Aufwärm-, Arbeits- und fehlgeschlagener Sätze. GYM STATS entstand im September 2026 als Neugestaltung älterer Trainingsplan-Seiten im Terminal-Look (GYM_TERMINAL). Eine Neufassung in React ist lokal in Arbeit."
+      ],
+      "tech": [
+        "HTML",
+        "CSS",
+        "JavaScript (ohne Framework)",
+        "SVG-Diagramme",
+        "GitHub Actions + GitHub Pages"
+      ],
+      "features": [
+        "Bestwerte-Kacheln: Squat 1RM 110 kg (+10 kg seit Jul 2024), Bench 1RM 77,5 kg, Deadlift 1RM 125 kg, Trizeps-PR 37,5 kg (+5 kg seit Jul 2024)",
+        "Squat-Kurve (Juli bis August 2024: 100 kg → 110 kg Rekord) als SVG-Liniendiagramm mit Flächenverlauf",
+        "Trizeps-Kurve über alle sechs Pläne (32,5 → 37,5 kg PR, dazu ein 40-kg-Versuch); die abweichende Übung in v6 ist eigens markiert und per Fußnote erklärt",
+        "Diagrammpunkte per Maus und Tastatur fokussierbar, Tooltip mit Datum, Plan, Gewicht und Detail; jede Kurve auch „Als Tabelle anzeigen“",
+        "Tabelle „Fortschritt je Übung“: Top-Gewicht bei Trizeps und Squat je Plan, mit Link auf den Originalplan",
+        "Plan-Karten mit Datum und Nutzungsdauer (z. B. „29 Tage genutzt“), Status Archiviert/Aktuell",
+        "Archivseite mit Gesamtstatistik (Zeitspanne, Versionen, Max-Squat, Datenpunkte) und einer gepinnten Filmstreifen-Timeline, durch die man scrollend blättert; Klick springt zur passenden Plan-Karte",
+        "Eine Seite je Plan (v2 bis v7) mit jedem geloggten Satz; Aufwärmsätze, Arbeitssätze und fehlgeschlagene Sätze sind unterschieden",
+        "Plan v7.0: Ein Skript ergänzt bei Squat-, Bench- und Deadlift-Sätzen automatisch den Prozentwert vom 1RM (110 / 77,5 / 125 kg)"
+      ],
+      "links": [],
+      "images": [
+        {
+          "alt": "Startseite von GYM STATS: Überschrift „Jedes Gewicht. Jede Woche. Dokumentiert.“ über Kacheln mit Squat-, Bench- und Deadlift-Bestwerten",
+          "src": "assets/projects/gym-stats/gym-stats-standalone.webp",
+          "available": false
+        },
+        {
+          "alt": "Abschnitt Training der Portfolio-Seite: Überschrift „Jedes Gewicht. Dokumentiert.“ über den Bestwerten bei Squat, Bench und Deadlift (aus der lokalen Neufassung, nicht veröffentlicht)",
+          "src": "assets/projects/gym-stats/gym-stats-training-section.webp",
+          "available": false
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Squat 1RM",
+          "value": "110 kg"
+        },
+        {
+          "label": "Bench 1RM",
+          "value": "77,5 kg"
+        },
+        {
+          "label": "Deadlift 1RM",
+          "value": "125 kg"
+        },
+        {
+          "label": "Trizeps-PR",
+          "value": "37,5 kg"
+        }
+      ],
+      "palette": [],
+      "circuits": [],
+      "missing": [
+        "Was ich gelernt habe",
+        "Links"
+      ],
+      "extra": []
+    },
+    {
+      "id": "gameboy-mit-raspberry-pi",
+      "number": 3,
+      "title": "Gameboy mit Raspberry Pi",
+      "shortTitle": "Gameboy mit Raspberry Pi",
+      "subtitle": "",
+      "category": "Facharbeit",
+      "period": "Schuljahr 2026/27",
+      "start": "2026-09",
+      "status": "",
+      "summary": "Facharbeit im Schuljahr 2026/27 zum Thema „Gameboy mit Raspberry Pi“, mit Fachbezug IKE.",
+      "description": [],
+      "tech": [],
+      "features": [],
+      "links": [],
+      "images": [],
+      "metrics": [],
+      "palette": [],
+      "circuits": [],
+      "missing": [
+        "Beschreibung",
+        "Technik",
+        "Features",
+        "Status",
+        "Was ich gelernt habe",
+        "Links",
+        "Bilder"
+      ],
+      "extra": []
+    },
+    {
+      "id": "siemens-logo",
+      "number": 4,
+      "title": "Siemens LOGO! – Logikschaltungen",
+      "shortTitle": "Siemens LOGO!",
+      "subtitle": "Logikschaltungen",
+      "category": "Schule · Steuerungstechnik",
+      "period": "Sep. – Nov. 2026",
+      "start": "2026-09",
+      "status": "Schulübungen.",
+      "summary": "Schulübungen mit LOGO!Soft Comfort: Steuerungen als Funktionsplan mit UND-, ODER-, XOR-, NICHT- und RS-Bausteinen.",
+      "description": [
+        "Im Unterricht wurden Steuerungsaufgaben mit Siemens LOGO!Soft Comfort (Version 9.0) als Funktionsplan umgesetzt. Erhalten sind Screenshots mehrerer Schaltungen vom September 2026 – darunter eine beschriftete Braukessel-Steuerung (Heizen, Überdruck-Meldung) und eine Folgeschaltung für vier Montagebänder. Dazu kommen zwei gespeicherte LOGO!-Projektdateien vom Oktober und November 2026."
+      ],
+      "tech": [
+        "Siemens LOGO!Soft Comfort V9.0",
+        "Funktionsplan (FUP)",
+        "UND",
+        "ODER",
+        "XOR",
+        "NICHT",
+        "RS-Selbsthalterelais"
+      ],
+      "features": [
+        "UND- und ODER-Verknüpfungen mit bis zu vier Eingängen; XOR mit drei Eingängen über zwei hintereinandergeschaltete Bausteine",
+        "NICHT-Baustein (negierter Ausgang) für eine Überdruck-Meldung",
+        "RS-Selbsthalterelais (Remanenz aus)",
+        "Folgeschaltung: Band 1–3 werden jeweils über UND mit dem Ausgang des nachfolgenden Bandes freigegeben",
+        "Beschriftete Ein- und Ausgänge, z. B. „Kessel Volle“, „Heizen“, „Ueberdruck“, „Ein Schalter Band1“"
+      ],
+      "links": [],
+      "images": [
+        {
+          "alt": "LOGO!-Schaltung: Braukessel-Steuerung mit beschrifteten Ein-/Ausgängen (ODER, UND, NICHT)",
+          "src": "assets/projects/logo/logo-braukessel.png",
+          "available": false
+        },
+        {
+          "alt": "LOGO!-Schaltung: Folgeschaltung für vier Montagebänder (UND-Freigaben)",
+          "src": "assets/projects/logo/logo-folgeschaltung-baender.png",
+          "available": false
+        },
+        {
+          "alt": "LOGO!-Schaltung: Folgeschaltung mit drei RS-Selbsthalterelais",
+          "src": "assets/projects/logo/logo-folgeschaltung-rs.png",
+          "available": false
+        },
+        {
+          "alt": "LOGO!-Schaltung: Vier Eingänge, sechs UND- und vier ODER-Bausteine, drei Ausgänge",
+          "src": "assets/projects/logo/logo-und-oder-4-eingaenge.png",
+          "available": false
+        },
+        {
+          "alt": "LOGO!-Schaltung: Zwei XOR-Bausteine mit drei Eingängen auf Q1",
+          "src": "assets/projects/logo/logo-xor-3-eingaenge.png",
+          "available": false
+        }
+      ],
+      "metrics": [],
+      "palette": [],
+      "circuits": [
+        "UND (AND, 2 Eingänge)",
+        "ODER (OR, 2 Eingänge)",
+        "XOR (XOR, 2 Eingänge)",
+        "NICHT (NOT, 1 Eingänge)",
+        "RS-Selbsthaltung (RS, 2 Eingänge)"
+      ],
+      "missing": [
+        "Was ich gelernt habe",
+        "Links"
+      ],
+      "extra": []
+    },
+    {
+      "id": "affenmal",
+      "number": 5,
+      "title": "affenmal – Minecraft-Portfolio",
+      "shortTitle": "affenmal",
+      "subtitle": "Minecraft-Portfolio",
+      "category": "Website · Minecraft",
+      "period": "Sep. 2026 – Nov. 2026",
+      "start": "2026-09",
+      "status": "Live unter mc.siggidy.dev.",
+      "summary": "Portfolio-Website zu meiner Minecraft-Welt: Beim Scrollen fährt die Kamera in 3D durch ein Torii-Tor und einen Steinpfad unter blühenden Kirschbäumen entlang.",
+      "description": [
+        "Die Seite stellt meine Survival-Welt „SiggidyWorld“ mit japanischen Tempeln, Schreinen und Gärten vor. Im Hintergrund läuft eine mit React Three Fiber gebaute 3D-Szene mit Torii, Sandō samt Laternen, Sakura-Bäumen und fallenden Blütenblättern, die erst bei Bedarf nachgeladen und auf Handys abgespeckt wird. Bei „Bewegung reduzieren“, aktivem Datensparmodus oder ohne brauchbares WebGL zeigt die Seite stattdessen einen schlichten Papier-Look. Ein 3D-Skin-Viewer zeigt meinen Skin mit Cape; Besucher können am Modell Rüstung Teil für Teil anlegen und über eine Profilsuche ihren eigenen Skin laden. Dazu kommen ein Weltsteckbrief, eine Zeitleiste, eine Galerie mit Lightbox, hochzählende Statistiken, live über die Modrinth-API geladene Projekte und ein animiertes Tab-Icon in Form eines Hanko-Stempels. Alle Inhalte stehen zentral in einer Datendatei; gehostet wird die Seite über GitHub Pages und Vercel."
+      ],
+      "tech": [
+        "React 19",
+        "Vite 8",
+        "three.js",
+        "@react-three/fiber",
+        "skinview3d",
+        "GSAP",
+        "Lenis (Smooth Scrolling)",
+        "sharp (Screenshots → WebP)",
+        "GitHub Pages",
+        "Vercel"
+      ],
+      "features": [
+        "Scroll-gesteuerte 3D-Welt (Torii, Steinpfad, Sakura, Blütenblätter), lazy geladen und auf Mobilgeräten reduziert",
+        "Fallback ohne 3D bei „Bewegung reduzieren“, Datensparmodus oder fehlendem WebGL",
+        "Profilansicht mit Skin-Modell und Capes; Besucher können ihr eigenes Profil per Name oder UUID suchen",
+        "Weltsteckbrief, Zeitleiste der Meilensteine, Galerie mit Lightbox und Koordinaten",
+        "Animierte Statistiken und live geladene Modrinth-Projekte",
+        "Animiertes Tab-Icon: Hanko-Stempel (湯瑪斯), der sich einmal pro Minute umdreht",
+        "Intro-Animation, Smooth Scrolling, Scroll-Fortschrittsbalken, Abschnitts-Navigation",
+        "Alle Inhalte zentral in src/data/content.js; Skript, das Screenshots in WebP umwandelt"
+      ],
+      "links": [
+        {
+          "label": "Website",
+          "url": "https://mc.siggidy.dev"
+        },
+        {
+          "label": "GitHub",
+          "url": "https://github.com/Sieder2009/mc"
+        }
+      ],
+      "images": [
+        {
+          "alt": "Roter Hanko-Stempel mit den weißen Schriftzeichen 湯瑪斯, das Icon der Seite",
+          "src": "assets/projects/mc-website/hanko-stempel.png",
+          "available": false
+        }
+      ],
+      "metrics": [],
+      "palette": [],
+      "circuits": [],
+      "missing": [
+        "Was ich gelernt habe"
+      ],
+      "extra": []
+    },
+    {
+      "id": "aurora-nights",
+      "number": 6,
+      "title": "Aurora Nights (SiggidyShader)",
+      "shortTitle": "Aurora Nights",
+      "subtitle": "SiggidyShader",
+      "category": "Minecraft · Shader",
+      "period": "Sep. 2026 – Okt. 2026",
+      "start": "2026-09",
+      "status": "Öffentlich auf GitHub (neuester Stand auf dem Branch „runde-3-bis-6“). Ein Test im Spiel ist laut README noch nicht dokumentiert.",
+      "summary": "Iris/OptiFine-Shaderpack „Aurora Nights“ für Minecraft Java 26.3: realistische Beleuchtung, die bewusst blockig bleibt, mit pixeliger Sonne, eckigem Mond mit Phasen, blockigen Wolken und Polarlichtern in klaren Nächten.",
+      "description": [
+        "Aurora Nights ist ein in GLSL geschriebener Shader für Iris (empfohlen) oder OptiFine, gebaut als Forward-Renderer mit einem zusätzlichen Puffer für Normalen und Materialdaten. Er bietet weiche Schatten über eine Shadow Map mit Hardware-PCF, Wasser mit Wellen, Fresnel-Reflexion, Screen-Space-Reflections und Tiefenfärbung, SSAO, TAA, HDR-Bloom mit ACES-Tonemapping, wehende Pflanzen, Lichtstrahlen, Pfützen und Regenbögen nach Regen sowie eigene Looks für Nether und End. Vier Performance-Profile (Potato bis High) schalten nur die leistungsrelevanten Optionen; auf Potato wird der komplette Shadow-Pass übersprungen. Der Code liegt einmal in program/ und lib/, die Dimensions-Ordner enthalten nur kurze Wrapper. Laut README diente der Drittanbieter-Shader ComplementaryReimagined nur als Ideen-Referenz, Code wurde nicht übernommen. Das Repo enthält außerdem ein älteres, eigenständiges Shaderpack „High-Performance Cinematic“."
+      ],
+      "tech": [
+        "GLSL 1.20",
+        "Iris",
+        "OptiFine",
+        "shaders.properties / block.properties",
+        "glslangValidator (Prüfkompilierung laut README)"
+      ],
+      "features": [
+        "Minecraft-Himmel: Himmels- und Nebelfarben je Biom aus dem Spiel, pixelige Sonne, eckiger Mond mit Phasen, blockige Wolken aus 12×12-Feldern; alternativ realistischer Himmel und 3D-Wolken",
+        "Polarlichter in klaren Nächten, Lichtstrahlen, Wolkenschatten, Regenbogen nach Regen",
+        "Weiche Schatten mit Hardware-PCF, SSAO, leuchtende Blöcke, Licht aus der Hand",
+        "Wasser: Wellen, Fresnel, Screen-Space-Reflections, Tiefenfärbung, Kaustiken unter Wasser",
+        "Spiegelnde Blöcke (Metalle färben ihre Spiegelung), nasser Boden und Pfützen bei Regen",
+        "TAA mit Nachschärfen, HDR-Bloom, ACES-Tonemapping, Vignette, Dithering gegen Banding",
+        "Eigene Looks für Nether (ohne Shadow-Pass) und End (violetter Sternenhimmel)",
+        "Vier Performance-Profile Potato/Low/Medium/High; fast jeder Effekt einzeln abschaltbar"
+      ],
+      "links": [
+        {
+          "label": "GitHub (Branch runde-3-bis-6)",
+          "url": "https://github.com/Sieder2009/SiggidyShader/tree/runde-3-bis-6"
+        }
+      ],
+      "images": [],
+      "metrics": [],
+      "palette": [],
+      "circuits": [],
+      "missing": [
+        "Was ich gelernt habe",
+        "Bilder"
+      ],
+      "extra": []
+    },
+    {
+      "id": "hotbarx",
+      "number": 7,
+      "title": "HotbarX – Crimson Obsidian UI",
+      "shortTitle": "HotbarX",
+      "subtitle": "Crimson Obsidian UI",
+      "category": "Minecraft · Resource Pack",
+      "period": "Okt. 2026",
+      "start": "2026-10",
+      "status": "Öffentlich auf GitHub als v0.7; laut README noch nicht im Spiel getestet.",
+      "summary": "Dunkles GUI-Resource-Pack für Minecraft Java 26.3 (lädt auch in 26.2): mattschwarze Panels, dünne blutrote Rahmen, karminrote Akzente und bewusst kein einziges goldenes, gelbes oder bronzefarbenes Pixel.",
+      "description": [
+        "HotbarX gestaltet das HUD und die Bildschirme neu, die man beim Spielen sieht: Inventar, Truhen, Werkbank, Shulkerkiste, Rezeptbuch, Hotbar, Statusleisten, Tooltips und Toasts. Alle Texturen erzeugt ein Java-Generator deterministisch aus den Vanilla-Vorlagen der Client-JAR und bricht bei jeder Regelverletzung ab, etwa bei einem Pixel außerhalb der Palette oder einer Naht im Truhenrahmen. Die Palette besteht aus 17 Tokens, bei denen Grün = Blau gilt: Jeder Pixel ist damit neutralgrau oder rein rot, und ein PowerShell-Prüfskript kann maschinell sicherstellen, dass kein Gold-Ton durchrutscht. Container-Titel werden über einen gepatchten Core-Shader karminrot eingefärbt, ein Pack-Overlay liefert die Variante für 26.2. Aus der Golden Apple wird der „Blood Apple“, Tooltips werden zu „System-Fenstern“ und Erfolgs-Toasts melden „Title Acquired!“ – laut README von einem Anime inspiriert, aber ohne Namen, Logos oder Figuren. Palette, Geometrie, Engine-Grenzen und Abnahmetests sind in einer ausführlichen Spezifikation dokumentiert."
+      ],
+      "tech": [
+        "Java 17+ (Single-File-Texturgenerator)",
+        "PowerShell (Paletten-Prüfung)",
+        "GLSL (Core-Shader-Patch text.vsh)",
+        "Minecraft-Java-Resource-Pack (Format 88–97, Overlay für 26.2)",
+        "Minecraft-Lang-Datei (en_us)"
+      ],
+      "features": [
+        "Gestaltete Bildschirme: Inventar, Truhe, große Truhe, Fass, Endertruhe, Server-Menüs mit 1–6 Reihen, Werkbank, Shulkerkiste, Rezeptbuch",
+        "HUD: Hotbar mit karminrotem Auswahlrahmen, karminrote Herzen, blutroter Hunger, Stahl-Rüstung, XP-Leiste",
+        "Container-Titel in #FF0000 über einen Core-Shader-Patch, auch bei umbenannten Truhen und Server-Menüs",
+        "Tooltips als „System-Fenster“, Erfolgs-Toasts mit „Title Acquired!“",
+        "Golden Apple wird zum „Blood Apple“, Tränke und Enderauge mit roten Funken",
+        "Deterministischer Generator mit Layout-Prüfungen; Paletten-Check (-Strict) gegen Gold/Gelb/Orange",
+        "Kompatibilität 26.3 und 26.2 über ein Pack-Overlay",
+        "Vorschaubilder für die README werden vom Generator selbst gerendert"
+      ],
+      "links": [
+        {
+          "label": "GitHub",
+          "url": "https://github.com/Sieder2009/HotbarX"
+        }
+      ],
+      "images": [
+        {
+          "alt": "Pack-Icon: stählerner Topfhelm mit glühend rotem Sehschlitz auf schwarzem Panel mit roten Ecken",
+          "src": "assets/projects/hotbarx/pack-icon-great-helm.png",
+          "available": false
+        }
+      ],
+      "metrics": [],
+      "palette": [],
+      "circuits": [],
+      "missing": [
+        "Was ich gelernt habe"
+      ],
+      "extra": []
+    },
+    {
+      "id": "omnicraft",
+      "number": 8,
+      "title": "OmniCraft – Die Vergilbte Chronik",
+      "shortTitle": "OmniCraft",
+      "subtitle": "Die Vergilbte Chronik",
+      "category": "Minecraft · Resource Pack",
+      "period": "Nov. 2026",
+      "start": "2026-11",
+      "status": "In Arbeit (Version 0.1.0); noch nicht im Spiel getestet.",
+      "summary": "Retro/Vintage-Resource-Pack für Minecraft Java: Eine Node.js-Pipeline wandelt die Vanilla-Texturen automatisch in einen Look aus Pergament, Altholz und Tinte um, mit einer festen 76-Farben-Palette im Stil von 16-Bit-RPGs.",
+      "description": [
+        "OmniCraft – Die Vergilbte Chronik soll Minecraft wie eine alte Chronik aussehen lassen: vergilbtes Pergament, nachgedunkeltes Holz, Tinte statt Schwarz und Mobs aus einem mittelalterlichen Bestiarium. Statt jede Textur einzeln zu malen, liest eine Node.js-Pipeline die Vanilla-Texturen direkt aus der Client-JAR, graded sie im OKLab-Farbraum, bildet jeden Pixel auf die Palette ab und setzt optional geordnetes Bayer-Dithering ein; der Alpha-Kanal bleibt exakt erhalten. Eine Regeldatei legt pro Textur die Behandlung fest (z. B. GUI → Pergament, feindliche Mobs → dunkler und härter), Sonderfälle wie Tint-Masken, Colormaps, Leuchtlayer und Rüstungsbesätze werden gezielt geschont. Ein Verify-Schritt gleicht das fertige Pack mit der JAR ab (Vollständigkeit, Maße, Alpha, .mcmeta, Pack-Format). Ein ausführlicher Styleguide beschreibt Palette, Pixel-Regeln, GUI, Umgebung und ein Konzept für jeden Mob. Auf einem weiteren Branch werden ausgewählte Blöcke, GUI-Elemente und Monster (u. a. Zombie, Skelett, Spinne, Enderman, Creeper) prozedural neu gezeichnet."
+      ],
+      "tech": [
+        "Node.js (≥ 20)",
+        "JavaScript (ES-Module)",
+        "pngjs",
+        "fflate",
+        "OKLab-Farbraum / Farbquantisierung",
+        "Bayer-Dithering",
+        "Minecraft-Java-Resource-Pack"
+      ],
+      "features": [
+        "Automatische Umwandlung aller Vanilla-Texturen aus der Client-JAR in den Retro-Stil",
+        "Eine einzige Farbquelle (palette.json), die Generator und Styleguide gemeinsam nutzen",
+        "Regel-System pro Textur: Mob-Presets, Tint-Masken, Ausschlüsse, Leuchtakzente nur für Licht/Magie",
+        "Verify-Schritt: Vollständigkeit, Maße, unveränderter Alpha-Kanal, .mcmeta und Pack-Format",
+        "Vorher/Nachher-Vorschau, Farbton-Histogramm und automatisch erzeugte Palettentafel",
+        "Overrides-Ordner für handgemalte Texturen, die immer gewinnen",
+        "Styleguide mit Mob-Konzepten (Bestiarium) für Untote, Kreaturen, Illager, Bosse, Dorf und Tiere",
+        "Branch „texturen-und-monster“: neu gezeichnete Blöcke und GUI-Elemente sowie elf Monster in 4-facher Auflösung"
+      ],
+      "links": [],
+      "images": [
+        {
+          "alt": "Farbtafel der Palette „Vergilbte Chronik“: 17 Farbrampen von Asche über Pergament, Holz und Blutrot bis zu den Leuchtakzenten Glut und Arkan",
+          "src": "assets/projects/omnicraft/palette-vergilbte-chronik.png",
+          "available": false
+        },
+        {
+          "alt": "Pixel-Art-Pack-Icon: roter Wappenschild mit Schwert auf Pergamentgrund",
+          "src": "assets/projects/omnicraft/pack-icon-wappenschild.png",
+          "available": false
+        }
+      ],
+      "metrics": [],
+      "palette": [
+        "#0d0b08",
+        "#423c35",
+        "#7c766e",
+        "#bdb6ae",
+        "#a8874f",
+        "#f6e6b8",
+        "#d0c7aa",
+        "#7b5d3c",
+        "#2e1c10",
+        "#8f6237",
+        "#a83c2c",
+        "#8f461b",
+        "#5e4613",
+        "#e4c25e",
+        "#808f37",
+        "#2f4c2f",
+        "#173533",
+        "#68a394",
+        "#2c4152",
+        "#9fbac4",
+        "#42528c",
+        "#47295c",
+        "#421330",
+        "#b9618b"
+      ],
+      "circuits": [],
+      "missing": [
+        "Was ich gelernt habe",
+        "Links"
+      ],
+      "extra": []
+    },
+    {
+      "id": "blockblast",
+      "number": 9,
+      "title": "BlockBlast",
+      "shortTitle": "BlockBlast",
+      "subtitle": "",
+      "category": "Spiel · Flutter",
+      "period": "Aug. 2026 – Okt. 2026",
+      "start": "2026-08",
+      "status": "Version 1.0.0; Repository privat.",
+      "summary": "Block-Puzzle im Stil des Spiels „Block Blast“, gebaut mit Flutter: Teile per Drag-and-Drop auf ein 8 × 8-Feld ziehen, volle Reihen und Spalten abräumen, Rekord jagen.",
+      "description": [
+        "BlockBlast ist ein Block-Puzzle für Handy, Desktop und Browser, geschrieben in Dart mit Flutter. Unten liegen immer drei Teile, die ohne Drehen aufs 8 × 8-Feld gezogen werden; volle Reihen und Spalten verschwinden, und passt keines der übrigen Teile mehr, ist das Spiel vorbei. Punkte gibt es pro gelegtem Block, für abgeräumte Linien (Linien² × 10) und als Combo-Bonus für mehrere Abräum-Züge hintereinander. Bei fast vollem Feld sorgt eine Fairness-Regel dafür, dass unter den drei neuen Teilen mindestens eines noch passt. Rekord und laufendes Spiel werden lokal gespeichert, sodass es nach einem Neustart genau dort weitergeht. Builds sind für Android, Windows und Web vorgesehen."
+      ],
+      "tech": [
+        "Dart",
+        "Flutter",
+        "shared_preferences",
+        "Android",
+        "Windows",
+        "Flutter Web"
+      ],
+      "features": [
+        "Drag-and-Drop von drei Teilen auf ein 8 × 8-Feld, ohne Drehen",
+        "37 Formen (Einzelblock bis 5er-Stücke, L, T, S/Z, Quadrate) in 8 Farben",
+        "Faire Teile: bei fast vollem Feld passt immer mindestens eines der drei neuen Teile",
+        "Vorschau beim Ziehen: grün/rot für Passt/Passt nicht, Hervorhebung der Linien, die verschwinden würden",
+        "Punktesystem: 1 Punkt pro Block, Linien² × 10, +10 je Combo-Stufe ab der zweiten",
+        "Rekord und laufendes Spiel werden lokal gespeichert (shared_preferences)",
+        "Punkte-Popups, Haptik-Feedback, Nachfrage vor „Neues Spiel“, „Neuer Rekord!“ am Ende",
+        "Release-Build für Android vorbereitet (Signierschlüssel bewusst nicht im Repo)"
+      ],
+      "links": [],
+      "images": [],
+      "metrics": [],
+      "palette": [],
+      "circuits": [],
+      "missing": [
+        "Was ich gelernt habe",
+        "Links",
+        "Bilder"
+      ],
+      "extra": []
+    },
+    {
+      "id": "webmapper",
+      "number": 10,
+      "title": "WebMapper",
+      "shortTitle": "WebMapper",
+      "subtitle": "",
+      "category": "Minecraft-Mod · Full-Stack",
+      "period": "Okt. 2026 – Nov. 2026",
+      "start": "2026-10",
+      "status": "In Arbeit, noch nicht veröffentlicht (Lizenz: MIT).",
+      "summary": "WebMapper scannt einen frei wählbaren Bereich einer Minecraft-Welt und zeigt ihn im Browser als 3D-Diorama (WebGL2) und als 2D-Karte (Canvas). Die Daten werden in einem eigenen Binärformat extrem kompakt übertragen, in der Demo-Welt rund 117-mal kleiner als ein dichtes Block-Array.",
+      "description": [
+        "WebMapper besteht aus drei Teilen: einer Fabric-Mod für Minecraft 26.3 (Java 25) mit dem Befehl /webscan, einem Node.js-Backend ganz ohne npm-Abhängigkeiten und einem statischen Viewer ohne Build-Schritt und ohne externe Bibliotheken. Die Mod scannt den gewählten Quader, ohne den Server-Thread zu blockieren, speichert nur sichtbare Blöcke und Flächen und schickt das Ergebnis als .wmap-Datei mit Token per HTTP an das Backend. Das Backend prüft und speichert die Datei, liefert sie per REST aus und meldet neue Scans per Server-Sent Events live an offene Viewer. Im Browser dekodiert ein Web Worker die Datei und baut instanzierte Geometrie für WebGL2; dazu gibt es eine 2D-Draufsicht. Das .wmap-Format ist selbst entworfen und dokumentiert (Header, Inline-Palette, RLE mit Varints, Deflate): die Demo-Welt mit 3,84 Mio. Zellen schrumpft von 7,3 MiB auf 64 KiB. Java-Encoder und JavaScript-Decoder werden per Testskript gegeneinander geprüft; eine CI-Pipeline ist vorbereitet."
+      ],
+      "tech": [
+        "Java 25",
+        "Fabric (Loader, API, Loom)",
+        "Gradle",
+        "JUnit",
+        "Minecraft 26.3",
+        "Node.js (http, fs, zlib, crypto, stream)",
+        "Server-Sent Events",
+        "JavaScript (ES-Module)",
+        "WebGL2",
+        "Canvas 2D",
+        "Web Worker",
+        "DecompressionStream"
+      ],
+      "features": [
+        "Befehl /webscan: Quader zwischen zwei Ecken, Quadrat um die eigene Position, Status, Abbrechen, Konfiguration neu laden",
+        "Asynchroner Scan: Server-Thread nutzt pro Tick höchstens ein Zeitbudget (Standard 3 ms), Kodieren im Worker-Thread",
+        "Eigenes Binärformat .wmap: nur sichtbare Blöcke, 6-Bit-Seitenmaske, Inline-Palette, RLE + Varints, zlib/Deflate",
+        "Demo-Welt 200 × 96 × 200: dicht 7,3 MiB, als .wmap 64 KiB, Dekodieren in rund 40 ms",
+        "Upload mit Token und Wiederholversuchen; bei Fehlschlag lokale Sicherung der Datei",
+        "Backend ohne npm-Abhängigkeiten: Streaming-Upload, Prüfung von Header und Deflate-Strom, Schutz vor Zip-Bomben, REST-API, SSE-Live-Updates, automatische Rotation alter Scans",
+        "Viewer 3D: Diorama mit Minecraft-artiger Schattierung, durchscheinendem Wasser/Glas, Nebel und Y-Schnitt für Höhlen; instanziertes Rendern, Kacheln, Frustum-Culling, Rendern nur bei Bedarf",
+        "Viewer 2D: Draufsicht mit Wassertiefe, Höhenschattierung, Chunk-Raster und Block-Infos unter der Maus",
+        ".wmap-Dateien per Drag & Drop lokal im Browser öffnen"
+      ],
+      "links": [],
+      "images": [],
+      "metrics": [],
+      "palette": [],
+      "circuits": [],
+      "missing": [
+        "Was ich gelernt habe",
+        "Links",
+        "Bilder"
+      ],
+      "extra": []
+    },
+    {
+      "id": "verifyai",
+      "number": 11,
+      "title": "VerifyAI – Vero o falso?",
+      "shortTitle": "VerifyAI",
+      "subtitle": "Vero o falso?",
+      "category": "Präsentation · Web",
+      "period": "Okt. 2026",
+      "start": "2026-10",
+      "status": "Repository privat.",
+      "summary": "Filmartige One-Page-Präsentation auf Italienisch für die Schul-Start-up-Idee VerifyAI, eine App, die prüfen soll, ob eine Nachricht vera, dubbia oder falsa ist. Es gibt eine 2D-Version und eine Variante mit 3D-Bergsee im Hintergrund.",
+      "description": [
+        "VerifyAI stellt eine Schul-Start-up-Idee vor: eine App, die einschätzt, ob eine Nachricht wahr, zweifelhaft oder falsch ist. Die Website ist keine funktionierende Prüf-App, sondern eine Präsentation, die wie ein Film abläuft: 12 Vollbild-Szenen (vom Problem über Zielgruppe, Demo-Ablauf, Team und Roadmap bis zu Südtirol und Finale) spielen automatisch nacheinander, mit animierten Texten. Die 2D-Version nutzt langsam treibende Farbflächen im Hintergrund. Die 3D-Version legt einen durchgehenden Bergsee in React Three Fiber dahinter, mit Wasserspiegelung, pulsierender Lichtkugel, Glühwürmchen-Partikeln, Godrays und Kamerafahrten pro Szene. Gesteuert wird per Pfeiltasten, Leertaste (Auto-Play, ca. 15 s pro Szene) und F für Vollbild, in der 3D-Version zusätzlich per Mausrad oder Wischen."
+      ],
+      "tech": [
+        "React 19",
+        "Vite 8",
+        "Tailwind CSS 4",
+        "Framer Motion",
+        "oxlint",
+        "Three.js",
+        "React Three Fiber",
+        "@react-three/drei",
+        "@react-three/postprocessing"
+      ],
+      "features": [
+        "12 Vollbild-Szenen, die automatisch nacheinander abspielen (ca. 15 s pro Szene)",
+        "Animierte Texte (WordReveal, TypeText, GlitchText) und Verdict-Badges vera/dubbia/falsa",
+        "Steuerung: Pfeiltasten, Leertaste (Play/Pause), F (Vollbild); 3D-Version zusätzlich Mausrad/Wischen",
+        "Steuerleiste und Mauszeiger blenden sich nach 2 Sekunden ohne Bewegung aus",
+        "2D-Version: weiche, langsam treibende Farbflächen (Parallax-Hintergrund)",
+        "3D-Version: Bergsee mit MeshReflectorMaterial-Spiegelung und prozedural erzeugter Normal-Map",
+        "3D-Version: Lichtkugel, Glühwürmchen, Sterne, Bloom, GodRays, Vignette, ACES-Tonemapping, Kamera-Ziel pro Szene",
+        "3D-Version: Leistungsanpassung (dpr max. 1.5, PerformanceMonitor), Fallback ohne WebGL, Rücksicht auf prefers-reduced-motion"
+      ],
+      "links": [],
+      "images": [
+        {
+          "alt": "VerifyAI-Logo: blauer Schild mit weißem Häkchen",
+          "src": "assets/projects/verifyai/verifyai-logo.svg",
+          "available": false
+        }
+      ],
+      "metrics": [],
+      "palette": [],
+      "circuits": [],
+      "missing": [
+        "Was ich gelernt habe",
+        "Links"
+      ],
+      "extra": []
+    },
+    {
+      "id": "raspberry-pi-website",
+      "number": 12,
+      "title": "Raspberry-Pi-Website (Schulprojekt)",
+      "shortTitle": "Raspberry-Pi-Website",
+      "subtitle": "Schulprojekt",
+      "category": "Schule · Website",
+      "period": "Apr. 2026 (letzte Änderung Aug. 2026)",
+      "start": "2026-04",
+      "status": "Nicht online; Repository privat.",
+      "summary": "Inoffizielle Übungs-Website rund um den Raspberry Pi: zuerst als einzelne Seite, dann mehrseitig, zuletzt in drei Sprachen (Deutsch, Englisch, Italienisch) mit Shop und Warenkorb. Laut Impressum ein Schulprojekt ohne Verbindung zur Raspberry Pi Foundation.",
+      "description": [
+        "Die letzte Fassung hat Seiten zu Geschichte, Hardware, Software, Support, Kontakt, Presse und Über uns sowie Impressum und Datenschutz, jeweils in drei Sprachen. Sechs Produktseiten und ein Shop füllen einen Warenkorb, der im localStorage des Browsers gespeichert wird. Dazu kommen ein Dark Mode, ein Hamburger-Menü für Mobilgeräte, Scroll-Animationen, Toast-Hinweise, ein FAQ-Akkordeon und ein Cookie-Banner. Die Vorstufe (RaspberryPiPage) ist eine deutschsprachige Website aus reinem HTML, CSS und etwas JavaScript, erst als einzelne Datei, dann mehrseitig. Zwei Commits der dreisprachigen Fassung stammen von einem Mitwirkenden."
+      ],
+      "tech": [
+        "HTML",
+        "CSS",
+        "JavaScript",
+        "localStorage"
+      ],
+      "features": [
+        "drei Sprachen: de/, en/, it/",
+        "Shop und Warenkorb mit Mengen, Summe und Badge, gespeichert im localStorage (Schlüssel pi_cart)",
+        "Produktseiten: Pi 5 8 GB, Pi 5 16 GB, Pi 500, Pi Zero 2 W, Starter Kit, Kamera & Sensoren",
+        "Seiten Geschichte, Hardware, Software, Support, Kontakt, Presse, Über uns, Impressum, Datenschutz",
+        "Dark Mode mit gespeicherter Auswahl",
+        "Hamburger-Menü, Header-Schatten beim Scrollen, Scroll-Reveal, sanftes Scrollen, Toasts, FAQ-Akkordeon",
+        "Cookie-Banner (Einverstanden/Ablehnen) in allen drei Sprachen"
+      ],
+      "links": [],
+      "images": [],
+      "metrics": [],
+      "palette": [],
+      "circuits": [],
+      "missing": [
+        "Was ich gelernt habe",
+        "Links",
+        "Bilder"
+      ],
+      "extra": []
+    },
+    {
+      "id": "home-terminal",
+      "number": 13,
+      "title": "HOME_TERMINAL",
+      "shortTitle": "HOME_TERMINAL",
+      "subtitle": "",
+      "category": "Website · Startseite",
+      "period": "Apr. 2025 – Jan. 2026",
+      "start": "2025-04",
+      "status": "Nicht mehr aktiv; Repository privat.",
+      "summary": "Persönliche Startseite im Hacker-Terminal-Look mit Matrix-Animation und den Bereichen Games, Personal_Information und Medien. Vorgänger von GYM STATS.",
+      "description": [
+        "Statische Website aus HTML, CSS und JavaScript im grünen Terminal-Stil. Die Startseite („// HOME_TERMINAL v0.1“) zeigt einen Matrix-Regen aus Nullen und Einsen und eine Live-Systemzeit und verlinkt drei Bereiche: ein Spiele-Terminal mit 3 Gewinnt, 4 Gewinnt und Blackjack, „Personal_Information“ mit dem Gym-Trainingsplan-Archiv GYM_TERMINAL und eine Medien-Seite. Dazu kommen eine Schwarzes-Loch-Simulation und eine Tic-Tac-Toe-Seite."
+      ],
+      "tech": [
+        "HTML",
+        "CSS",
+        "JavaScript",
+        "Canvas 2D"
+      ],
+      "features": [
+        "Matrix-Regen-Animation im Hintergrund (Canvas)",
+        "Live-Systemuhr",
+        "Spiele-Terminal: 3 Gewinnt, 4 Gewinnt, Blackjack",
+        "Schwarzes-Loch-Simulation",
+        "Gym-Trainingsplan-Hub mit 6 Plänen (GYM_TERMINAL)"
+      ],
+      "links": [],
+      "images": [],
+      "metrics": [],
+      "palette": [],
+      "circuits": [],
+      "missing": [
+        "Was ich gelernt habe",
+        "Links",
+        "Bilder"
+      ],
+      "extra": []
+    },
+    {
+      "id": "magic-mirror",
+      "number": 14,
+      "title": "Magic Mirror (Prototyp)",
+      "shortTitle": "Magic Mirror",
+      "subtitle": "Prototyp",
+      "category": "Experiment · Python",
+      "period": "März 2026 (Dateidatum)",
+      "start": "2026-03",
+      "status": "Prototyp, nicht veröffentlicht.",
+      "summary": "Smart-Mirror-Prototyp in Python: Uhr und Datum im Vollbild sowie eine Web-Oberfläche, deren Wetter-Kachel per Webcam-Handtracking dem Zeigefinger folgen soll.",
+      "description": [
+        "Ein kleines Experiment mit drei Varianten in einer Datei: eine Vollbild-Uhr mit Datum und Begrüßung (tkinter), ein minimaler Flask-Server für eine Web-Oberfläche im lokalen Netzwerk und eine Variante mit Flask-SocketIO, OpenCV und MediaPipe Hands, die die Position der Zeigefingerspitze an den Browser schicken soll; dort sollen ein Cursor-Punkt und eine Wetter-Kachel dem Finger folgen. Die Wetterdaten sind Platzhalter, ein Testlauf ist nicht belegt."
+      ],
+      "tech": [
+        "Python",
+        "tkinter",
+        "Flask",
+        "Flask-SocketIO",
+        "OpenCV",
+        "MediaPipe Hands",
+        "HTML",
+        "CSS",
+        "JavaScript"
+      ],
+      "features": [
+        "Vollbild-Uhr mit Datum und Begrüßungstext (tkinter)",
+        "Web-Oberfläche über Flask, im lokalen Netzwerk erreichbar (host 0.0.0.0, Port 5000)",
+        "Handtracking per Webcam mit MediaPipe (eine Hand, Mindestkonfidenz 0.7)",
+        "Geplante Echtzeit-Übertragung der Fingerposition per WebSocket (Event 'hand_move')",
+        "Wetter-Kachel und Cursor sollen dem Zeigefinger folgen (Wetterdaten noch Platzhalter)"
+      ],
+      "links": [],
+      "images": [],
+      "metrics": [],
+      "palette": [],
+      "circuits": [],
+      "missing": [
+        "Was ich gelernt habe",
+        "Links",
+        "Bilder"
+      ],
+      "extra": []
+    },
+    {
+      "id": "sps-mikrocontroller",
+      "number": 15,
+      "title": "SPS & Mikrocontroller (Schulübungen)",
+      "shortTitle": "SPS & Mikrocontroller",
+      "subtitle": "Schulübungen",
+      "category": "Schule · Automatisierung",
+      "period": "Dez. 2025 – Nov. 2026",
+      "start": "2025-12",
+      "status": "Schulübungen.",
+      "summary": "Übungen aus dem Unterricht: SPS-Programme in AWL mit WinSPS-S7, Arduino-Sketches und Proteus-Simulationen.",
+      "description": [
+        "Mit WinSPS-S7 entstanden von Dezember 2025 bis Mai 2026 gut ein Dutzend SPS-Programme in AWL: UND/ODER-Grundverknüpfungen, Selbsthaltungen mit Setzen und Rücksetzen, Timer und Zähler, dazu Symboltabellen für simulierte Anlagen (Sortieren, Waage mit Drehtisch). Ein Programm steuert eine Lötstation mit Start/Stopp-Selbsthaltung, Heiz-Timer und Endschaltern. Im Unterricht kamen außerdem Arduino-Sketches zu LEDs, Tastern, LCD, Temperatur, Motoren, Servo, Schrittmotor und Schieberegister sowie zwei Proteus-Simulationen mit Arduino UNO und Arduino Mega samt LCD dazu."
+      ],
+      "tech": [
+        "WinSPS-S7",
+        "STEP 7 AWL",
+        "Arduino",
+        "Proteus"
+      ],
+      "features": [
+        "UND/ODER-Grundverknüpfungen in AWL",
+        "Selbsthaltung mit Setz- und Rücksetzbefehlen",
+        "Timer (SI, SE, SV) und Zähler",
+        "Lötstation-Steuerung: Start/Stopp, Heiz-Timer, Endschalter",
+        "Arduino: LED, Taster, LCD, Temperatur, Motoren, Servo, Schrittmotor, Schieberegister 74HC595",
+        "Proteus-Simulation eines Arduino UNO mit eigenem Taster-Sketch"
+      ],
+      "links": [],
+      "images": [],
+      "metrics": [],
+      "palette": [],
+      "circuits": [],
+      "missing": [
+        "Was ich gelernt habe",
+        "Links",
+        "Bilder"
+      ],
+      "extra": []
+    }
+  ]
+}

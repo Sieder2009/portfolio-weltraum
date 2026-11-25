@@ -1,0 +1,31 @@
+{
+  "name": "space-portfolio",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Portfolio von Thomas Johann Sieder als interaktives Sonnensystem.",
+  "type": "module",
+  "engines": {
+    "node": ">=18.18"
+  },
+  "scripts": {
+    "dev": "vite",
+    "dev:lan": "vite --host",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "start": "vite build && vite preview --open",
+    "content": "node scripts/build-content.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@fontsource-variable/unbounded": "^5.3.0",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "@types/three": "^0.187.0",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.6"
+  }
+}
