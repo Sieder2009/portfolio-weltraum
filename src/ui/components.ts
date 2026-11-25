@@ -60,6 +60,7 @@ export function renderHero(el: HTMLElement) {
         ${timelineSection ? `<a class="btn" href="#/${timelineSection.slug}"><span>Alle Projekte</span></a>` : ""}
       </div>
       <p class="hero-hint" data-r>${hint}</p>
+      <p class="hero-swipe" data-r aria-hidden="true"><span class="hs-line"></span>${coarsePointer.matches ? "Wischen" : "Scrollen"} zum Losfliegen</p>
     </div>
     <div class="scroll-cue" aria-hidden="true">
       <span class="scroll-cue-text">${coarsePointer.matches ? "Wischen" : "Scrollen"} zum Losfliegen</span>

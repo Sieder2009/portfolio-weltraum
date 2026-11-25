@@ -341,7 +341,8 @@ export class App {
       this.showProject(route.stop, route.projectId, this.drawer ? this.drawer.pushed : true);
       return;
     }
-    if (this.drawer) this.closeDrawer(false);
+    // (closing through a link, e.g. "← Web" in the drawer: the address goes back to the planet too)
+    if (this.drawer) this.closeDrawer(true);
     this.goToStop(route.stop);
   }
 

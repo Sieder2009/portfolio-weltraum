@@ -682,6 +682,34 @@ button.chip:hover,
   pointer-events: auto;
 }
 
+/* (phones: a short line instead of the vertical cue) */
+.hero-swipe {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.hs-line {
+  position: relative;
+  width: 1px;
+  height: 26px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.hs-line::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent, var(--accent), transparent);
+  animation: cue 2.2s var(--ease-in-out) infinite;
+}
+
 .scroll-cue {
   position: absolute;
   right: var(--gutter);
@@ -2391,6 +2419,10 @@ html.is-loading .dock {
 
   .hero-hint {
     display: none;
+  }
+
+  .hero-swipe {
+    display: flex;
   }
 
   .panel {
