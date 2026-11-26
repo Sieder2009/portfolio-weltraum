@@ -1,6 +1,7 @@
 import { about, githubSince, projects, skillCount } from "../content";
 import { sections } from "../config/sections";
 import type { LabelFrame } from "../three/universe";
+import { STAR_REPO_URL } from "./stargazers";
 import { ICON, chars, coarsePointer, esc, initials, pad2, prettyUrl, reducedMotion, roll } from "./util";
 
 // ---------- Top bar ----------
@@ -63,6 +64,15 @@ export function renderHero(el: HTMLElement) {
         <a class="btn btn-primary" href="#/${firstSection.slug}"><span>System erkunden</span>${ICON.arrowRight}</a>
         ${timelineSection ? `<a class="btn" href="#/${timelineSection.slug}"><span>Alle Projekte</span></a>` : ""}
       </div>
+      <p class="hero-stars" data-r>
+        <a href="${STAR_REPO_URL}" target="_blank" rel="noopener noreferrer">
+          <span class="hs-icon" aria-hidden="true">★</span>
+          <span>${
+            // (without motion there is no battle: then it is just an invitation)
+            reducedMotion.matches ? "Gefällt dir die Seite? Gib ihr einen Stern auf GitHub" : "Jeder Stern auf GitHub schickt ein Schiff in die Schlacht"
+          }<span class="hs-count"></span></span>${ICON.external}
+        </a>
+      </p>
       <p class="hero-hint" data-r>${hint}</p>
       <p class="hero-swipe" data-r aria-hidden="true"><span class="hs-line"></span>${coarsePointer.matches ? "Wischen" : "Scrollen"} zum Losfliegen</p>
     </div>
@@ -70,6 +80,12 @@ export function renderHero(el: HTMLElement) {
       <span class="scroll-cue-text">${coarsePointer.matches ? "Wischen" : "Scrollen"} zum Losfliegen</span>
       <span class="scroll-cue-line"></span>
     </div>`;
+}
+
+/** How many stars the repository has on GitHub (in the hero, after the invitation). */
+export function setStarCount(el: HTMLElement, count: number) {
+  const out = el.querySelector(".hs-count");
+  if (out) out.textContent = count ? ` – bisher ${count}` : " – der erste fehlt noch";
 }
 
 // ---------- The journey: a stretch of travel, then a stop with its card, per planet ----------

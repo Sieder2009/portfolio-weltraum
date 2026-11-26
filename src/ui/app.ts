@@ -15,8 +15,10 @@ import {
   setDockActive,
   setLoaderProgress,
   setSoundButton,
+  setStarCount,
   setThumbnails,
 } from "./components";
+import { watchStars } from "./stargazers";
 import type { GameHandle } from "../game/shooter";
 import { sampleHeading } from "./nameSample";
 import { Sound } from "./sound";
@@ -160,8 +162,33 @@ export class App {
     if (this.frames) this.universe?.placeBlackHole(this.frames.overview);
     this.measure();
     this.started = true;
+    // Every star on GitHub sends a ship into the battle.
+    watchStars((count, before) => this.onStars(count, before));
 
     await this.hideLoader(this.parse(location.hash));
+  }
+
+  /**
+   * The repository's stars on GitHub: the star squadron has a ship for each; new stars drop out of hyperspace
+   * (once the loading screen is gone, so they can be seen), with a note.
+   */
+  private onStars(count: number, before: number | null) {
+    setStarCount(this.hero, count);
+    const arriving = before === null || count > before;
+    const apply = () => {
+      this.universe?.setStarShips(count, arriving);
+      if (before === null || count <= before) return;
+      const n = count - before;
+      const ships = this.universe && !reducedMotion.matches;
+      toast(
+        n === 1
+          ? `★ Ein neuer Stern auf GitHub${ships ? " – ein Schiff springt in die Schlacht" : ""}`
+          : `★ ${n} neue Sterne auf GitHub${ships ? ` – ${n} Schiffe springen in die Schlacht` : ""}`,
+      );
+    };
+    if (!arriving || !root.classList.contains("is-loading")) return apply();
+    const later = () => (root.classList.contains("is-loading") ? window.setTimeout(later, 400) : window.setTimeout(apply, 700));
+    later();
   }
 
   // ---------- 3D ----------
@@ -208,6 +235,8 @@ export class App {
   private onSceneHover(t: PickTarget | null) {
     this.stage.classList.toggle("is-pointing", !!t);
     this.labels?.setHover(t?.type === "planet" ? t.index : null, t?.type === "moon" ? t.projectId : null);
+    // (a ship of the star squadron says which star on GitHub it stands for)
+    if (t?.type === "ship") this.shipTip.textContent = t.star ? `GitHub-Stern Nr. ${t.star} · Klicken: Minispiel` : "Klicken: Minispiel starten";
     this.shipTip.classList.toggle("is-on", t?.type === "ship" && this.mousePointer);
     if (t) this.sound.blip(t.type === "planet" ? 1 + t.index * 0.04 : t.type === "moon" ? 1.5 : t.type === "ship" ? 1.8 : 0.8);
   }

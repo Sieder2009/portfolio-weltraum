@@ -17,8 +17,8 @@ export type PickTarget =
   | { type: "sun" }
   | { type: "planet"; index: number }
   | { type: "moon"; index: number; projectId: string }
-  /** a ship of the background battle (opens the mini game) */
-  | { type: "ship" };
+  /** a ship of the background battle (opens the mini game); `star`: a ship of the star squadron, for that star */
+  | { type: "ship"; star?: number };
 
 export interface ScreenPoint {
   x: number;
@@ -66,7 +66,8 @@ const samePick = (a: PickTarget | null, b: PickTarget | null) =>
     !!b &&
     a.type === b.type &&
     (a.type !== "planet" || a.index === (b as { index: number }).index) &&
-    (a.type !== "moon" || a.projectId === (b as { projectId: string }).projectId));
+    (a.type !== "moon" || a.projectId === (b as { projectId: string }).projectId) &&
+    (a.type !== "ship" || a.star === (b as { star?: number }).star));
 
 export function webglAvailable() {
   try {
@@ -384,6 +385,16 @@ export class Universe {
 
   /** 0…1, how deep in hyperspace the camera is */
   /**
+   * The star squadron in the battle: one ship per star on GitHub. `arriving`: the new ones drop out of hyperspace.
+   * Returns how many ships fly (the squadron has a limit).
+   */
+  setStarShips(count: number, arriving: boolean) {
+    if (!this.fleet) return 0;
+    this.fleet.setStars(count, arriving);
+    return Math.min(count, this.fleet.starCapacity);
+  }
+
+  /**
    * A flight the page makes on its own (dock, arrow keys, "fly on") that stays out of hyperspace for `seconds`:
    * a hop to the neighbouring planet is quick enough to count as fast. 0 ends it.
    */
@@ -529,7 +540,7 @@ export class Universe {
     const hit = best as PickTarget | null;
     if (hit) return hit;
     const ship = this.fleet?.pickShip(this.rig.camera, x, y, this.frame.width, this.frame.height, minRadius > 20 ? 20 : 14);
-    return ship != null ? { type: "ship" } : null;
+    return ship ? { type: "ship", star: ship.star || undefined } : null;
   }
 
   // ---------- frame loop ----------

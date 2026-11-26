@@ -144,7 +144,18 @@ Ton ist standardmäßig aus und lässt sich oben rechts einschalten (die Klänge
   (`src/three/hyperspace.ts`). Ruhiges Scrollen und der Flug zum Nachbarplaneten bleiben im normalen Raum. Die
   Schwelle steht in `src/three/universe.ts` (`updateWarp`).
 - **Raumschlacht:** Zwei Fraktionen mit eigenen Jäger- und Großkampfschiff-Entwürfen kämpfen im Hintergrund
-  (`src/three/fleet.ts`). Zeigt man auf ein Schiff, läuft der Kampf langsamer.
+  (`src/three/fleet.ts`), im Stil einer „gebrauchten Zukunft“: Rümpfe aus Platten in leicht unterschiedlichen
+  Tönen, verrußt zu den Triebwerken hin, verblichene Markierungen (rote Streifen bei der Patrouille), Cockpits aus
+  dunklem Glas. Die Patrouille schießt rot, die Plünderer grün; die Jäger hängen sich eng an den Gegner, weichen in
+  Schlangenlinien aus und rollen öfter. Zeigt man auf ein Schiff, läuft der Kampf langsamer.
+- **Sternenstaffel:** Jeder Stern, den das Repository auf GitHub bekommt, schickt ein Schiff in die Schlacht: eigene
+  Jäger mit goldenen Markierungen, in V-Formationen zu fünft, auf der Seite der Patrouille (bis zu 20 Schiffe, auf
+  Handys 10). Die Zahl kommt von der öffentlichen GitHub-API (ohne Login), beim Start und dann alle zwei Minuten,
+  solange die Seite sichtbar ist; der Browser merkt sie sich. Neue Sterne springen per Hyperraum ins Bild, mit
+  einer Meldung. Im Hero steht die Einladung mit der aktuellen Zahl; zeigt man auf ein Schiff der Staffel, steht
+  dort „GitHub-Stern Nr. …“. Welches Repository zählt, steht in `src/ui/stargazers.ts` (`STAR_REPO`).
+  Hinweis zum Datenschutz: Dafür fragt der Browser der Besucher direkt bei `api.github.com` an (liegt die Seite
+  ohnehin auf GitHub Pages, sieht GitHub die Besuche sowieso).
 - **Minispiel:** `src/game/shooter.ts`, ein Weltraum-Shooter mit Alien-Wellen, Power-ups und einer Schwarmkönigin
   in jeder fünften Welle. Wird erst beim Öffnen nachgeladen; der Rekord wird im Browser gespeichert.
 

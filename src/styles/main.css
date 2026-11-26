@@ -1380,6 +1380,55 @@ html:not(.is-loading) .scroll-cue {
   color: var(--text-faint);
 }
 
+/* The invitation to star the project on GitHub: each star is a ship in the battle. */
+.hero-stars {
+  margin-top: 20px;
+}
+
+.hero-stars a {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font: 500 12px/1.5 var(--font-mono);
+  letter-spacing: 0.03em;
+  color: var(--text-soft);
+  transition: color 0.3s;
+}
+
+.hero-stars a:hover {
+  color: var(--text);
+}
+
+.hero-stars svg {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.hs-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(255, 207, 120, 0.45);
+  border-radius: 4px;
+  color: #ffd27a;
+  font-size: 12px;
+  text-shadow: 0 0 10px rgba(255, 200, 100, 0.8);
+  transition:
+    background 0.3s,
+    box-shadow 0.3s;
+}
+
+.hero-stars a:hover .hs-icon {
+  background: rgba(255, 207, 120, 0.14);
+  box-shadow: 0 0 18px rgba(255, 200, 100, 0.35);
+}
+
+.hs-count {
+  color: #ffd27a;
+}
+
 /* ==========================================================================
    Labels next to planets and moons
    ========================================================================== */
