@@ -1,0 +1,615 @@
+<!doctype html>
+<!--
+  The page for addresses that don't exist on the server (GitHub Pages, Netlify, Vercel and most static hosts send
+  404.html for them). It can be shown at any depth (/portfolio/a/b/c), so it is self-contained: styles, script and
+  pictures are inline, no relative links to files. The way back to the start page is found at runtime.
+  (Addresses inside the page, "#/…", never reach the server: the app shows its own 404 for those.)
+-->
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#020309" />
+    <meta name="color-scheme" content="dark" />
+    <title>Seite nicht gefunden (404)</title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3CradialGradient id='s' cx='40%25' cy='38%25' r='65%25'%3E%3Cstop offset='0' stop-color='%23fff2d6'/%3E%3Cstop offset='.45' stop-color='%23ffb86b'/%3E%3Cstop offset='1' stop-color='%23e2531c'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%2305060d'/%3E%3Cellipse cx='32' cy='32' rx='25' ry='10' fill='none' stroke='%23fff' stroke-opacity='.28' stroke-width='1.5' transform='rotate(-18 32 32)'/%3E%3Ccircle cx='32' cy='32' r='10' fill='url(%23s)'/%3E%3Ccircle cx='53' cy='24' r='4.5' fill='%238fc6ff'/%3E%3C/svg%3E"
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #020309;
+        --text: #eef0ff;
+        --soft: rgba(226, 231, 255, 0.76);
+        --faint: rgba(206, 213, 245, 0.5);
+        --line: rgba(255, 255, 255, 0.09);
+        --line-strong: rgba(255, 255, 255, 0.18);
+        --accent: #ffb86b;
+        --ease: cubic-bezier(0.16, 1, 0.3, 1);
+        --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        --mono: ui-monospace, "Cascadia Code", "SF Mono", Consolas, "Liberation Mono", monospace;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font: 16px/1.6 var(--sans);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      body {
+        display: grid;
+        place-items: center;
+        min-height: 100vh;
+        min-height: 100svh;
+        padding: 96px 20px 56px;
+        overflow-x: hidden;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      :focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 3px;
+      }
+
+      /* ---- the sky: a nebula, three layers of stars drifting by, now and then a shooting star */
+
+      .sky {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        overflow: hidden;
+        pointer-events: none;
+        background:
+          radial-gradient(1100px 700px at 72% 20%, rgba(70, 40, 120, 0.3), transparent 70%),
+          radial-gradient(900px 600px at 18% 84%, rgba(20, 70, 110, 0.26), transparent 70%),
+          radial-gradient(700px 460px at 50% 42%, rgba(255, 170, 90, 0.07), transparent 70%);
+      }
+
+      .sky i {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: calc(var(--w) * -1);
+        background-size: var(--w) var(--w);
+        animation: drift var(--d) linear infinite;
+      }
+
+      .sky i:nth-child(1) {
+        --w: 233px;
+        --d: 120s;
+        opacity: 0.6;
+        background-image:
+          radial-gradient(circle at 12% 18%, #fff 0 0.6px, transparent 1.1px),
+          radial-gradient(circle at 64% 32%, #cfe0ff 0 0.6px, transparent 1.1px),
+          radial-gradient(circle at 38% 74%, #fff 0 0.5px, transparent 1px),
+          radial-gradient(circle at 86% 82%, #ffe8d0 0 0.6px, transparent 1.1px),
+          radial-gradient(circle at 22% 52%, #fff 0 0.4px, transparent 0.9px);
+      }
+
+      .sky i:nth-child(2) {
+        --w: 347px;
+        --d: 75s;
+        animation:
+          drift var(--d) linear infinite,
+          twinkle 3.6s ease-in-out infinite alternate;
+        background-image:
+          radial-gradient(circle at 28% 22%, #fff 0 0.8px, transparent 1.5px),
+          radial-gradient(circle at 78% 44%, #d6e6ff 0 0.9px, transparent 1.6px),
+          radial-gradient(circle at 52% 86%, #fff 0 0.7px, transparent 1.4px),
+          radial-gradient(circle at 8% 66%, #ffe3c4 0 0.8px, transparent 1.5px);
+      }
+
+      .sky i:nth-child(3) {
+        --w: 521px;
+        --d: 46s;
+        background-image:
+          radial-gradient(circle at 70% 16%, #fff 0 1.1px, rgba(190, 215, 255, 0.35) 1.6px, transparent 4px),
+          radial-gradient(circle at 18% 78%, #fff 0 1px, rgba(255, 220, 190, 0.3) 1.5px, transparent 3.5px);
+      }
+
+      .sky b {
+        position: absolute;
+        top: 14%;
+        left: 64%;
+        width: 140px;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9));
+        transform: rotate(-24deg);
+        opacity: 0;
+        animation: shoot 9s ease-in 2.5s infinite;
+      }
+
+      @keyframes drift {
+        to {
+          transform: translate3d(calc(var(--w) * -1), 0, 0);
+        }
+      }
+
+      @keyframes twinkle {
+        from {
+          opacity: 0.45;
+        }
+      }
+
+      @keyframes shoot {
+        0% {
+          opacity: 0;
+          translate: 0 0;
+        }
+        2% {
+          opacity: 1;
+        }
+        8%,
+        100% {
+          opacity: 0;
+          translate: -340px 150px;
+        }
+      }
+
+      /* ---- top left: the way home */
+
+      .brand {
+        position: fixed;
+        z-index: 2;
+        top: max(18px, env(safe-area-inset-top));
+        left: clamp(20px, 4vw, 56px);
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 44px;
+        font: 600 13px/1 var(--sans);
+        letter-spacing: 0.02em;
+      }
+
+      .brand-mark {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 40% 38%, #fff3dc, #ffb86b 45%, #e2531c);
+        box-shadow: 0 0 16px rgba(255, 170, 90, 0.7);
+      }
+
+      /* ---- the message */
+
+      main {
+        position: relative;
+        z-index: 1;
+        width: min(720px, 100%);
+        text-align: center;
+      }
+
+      .code {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 6px;
+        font: 900 clamp(6.5rem, 22vw, 13rem) / 1 var(--sans);
+        letter-spacing: -0.04em;
+        user-select: none;
+      }
+
+      .four {
+        background: linear-gradient(180deg, #ffffff 22%, #ffcf9a);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        animation: float 6s ease-in-out infinite;
+      }
+
+      .four:last-child {
+        animation-delay: -3s;
+      }
+
+      @keyframes float {
+        50% {
+          transform: translate3d(0, -0.04em, 0) rotate(-2deg);
+        }
+      }
+
+      /* the "0": a planet that isn't there (an outline of one, with a ring and a moon going round nothing) */
+      .ghost {
+        width: 1.06em;
+        height: 1.06em;
+        margin: 0 -0.08em;
+        overflow: visible;
+      }
+
+      .ghost .ring {
+        fill: none;
+        stroke: rgba(255, 255, 255, 0.3);
+        stroke-width: 1.4;
+      }
+
+      .ghost .ring.front {
+        stroke: rgba(255, 255, 255, 0.55);
+      }
+
+      .ghost .grid ellipse {
+        fill: none;
+        stroke: rgba(207, 224, 255, 0.24);
+        stroke-width: 1;
+      }
+
+      .ghost .outline {
+        fill: none;
+        stroke: #ffc78f;
+        stroke-width: 1.8;
+        stroke-dasharray: 3 8;
+        animation: turn 40s linear infinite;
+      }
+
+      .ghost .scan {
+        fill: rgba(255, 200, 150, 0.16);
+        animation: scan 3.4s ease-in-out infinite;
+      }
+
+      .ghost .moon {
+        fill: #d7e8ff;
+        filter: drop-shadow(0 0 4px #8fc6ff);
+      }
+
+      @keyframes turn {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      @keyframes scan {
+        0% {
+          transform: translateY(-70px);
+        }
+        100% {
+          transform: translateY(70px);
+        }
+      }
+
+      .kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font: 500 11.5px/1.3 var(--mono);
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--soft);
+      }
+
+      .kdot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow:
+          0 0 0 4px rgba(255, 184, 107, 0.22),
+          0 0 18px var(--accent);
+      }
+
+      h1 {
+        margin: 16px 0 14px;
+        font: 800 clamp(1.8rem, 4.6vw, 3rem) / 1.05 var(--sans);
+        letter-spacing: -0.02em;
+        text-transform: uppercase;
+      }
+
+      .text {
+        max-width: 54ch;
+        margin: 0 auto;
+        color: var(--soft);
+      }
+
+      .text code {
+        padding: 2px 8px;
+        border: 1px solid var(--line-strong);
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.05);
+        font: 500 0.9em/1.4 var(--mono);
+        color: var(--text);
+        overflow-wrap: anywhere;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+        margin-top: 32px;
+      }
+
+      /* buttons with cut corners, as on the site */
+      .btn {
+        --cut: 10px;
+        --chamfer: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+        position: relative;
+        isolation: isolate;
+        overflow: hidden;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 48px;
+        padding: 0 24px;
+        clip-path: var(--chamfer);
+        background: linear-gradient(135deg, rgba(255, 184, 107, 0.7), var(--line-strong) 40%);
+        font: 700 13px/1 var(--sans);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        transition:
+          color 0.45s var(--ease),
+          transform 0.45s var(--ease);
+      }
+
+      .btn::after {
+        content: "";
+        position: absolute;
+        inset: 1px;
+        z-index: -2;
+        clip-path: var(--chamfer);
+        background: rgba(8, 10, 24, 0.9);
+      }
+
+      .btn::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        background: var(--accent);
+        transform: translateY(102%);
+        transition: transform 0.55s var(--ease);
+      }
+
+      .btn svg {
+        width: 17px;
+        height: 17px;
+        transition: transform 0.45s var(--ease);
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        color: #05060d;
+      }
+
+      .btn-primary::after {
+        background: var(--accent);
+      }
+
+      .btn-primary::before {
+        background: #fff;
+      }
+
+      @media (hover: hover) {
+        .btn:hover {
+          color: #05060d;
+        }
+        .btn:hover::before {
+          transform: none;
+        }
+        .btn:hover svg {
+          transform: translateX(3px);
+        }
+      }
+
+      .btn:active {
+        transform: scale(0.97);
+      }
+
+      /* (cut corners clip everything outside them, the focus ring too: it goes inside) */
+      .btn:focus-visible {
+        outline: 2px solid #fff;
+        outline-offset: -5px;
+      }
+
+      .note {
+        margin-top: 40px;
+        font: 500 11px/1.6 var(--mono);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--faint);
+      }
+
+      /* ---- in one after another */
+
+      main > * {
+        animation: rise 0.9s var(--ease) both;
+      }
+
+      main > :nth-child(2) {
+        animation-delay: 0.12s;
+      }
+
+      main > :nth-child(3) {
+        animation-delay: 0.2s;
+      }
+
+      main > :nth-child(4) {
+        animation-delay: 0.28s;
+      }
+
+      main > :nth-child(5) {
+        animation-delay: 0.36s;
+      }
+
+      main > :nth-child(6) {
+        animation-delay: 0.44s;
+      }
+
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translate3d(0, 18px, 0);
+        }
+      }
+
+      @media (max-width: 560px) {
+        .actions .btn {
+          flex: 1 1 auto;
+          justify-content: center;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="sky" aria-hidden="true"><i></i><i></i><i></i><b></b></div>
+
+    <a class="brand" href="/" data-home=""><span class="brand-mark" aria-hidden="true"></span><span class="brand-name">Zur Startseite</span></a>
+
+    <main>
+      <div class="code" aria-hidden="true">
+        <span class="four">4</span>
+        <svg class="ghost" viewBox="-100 -100 200 200">
+          <defs>
+            <radialGradient id="glow" cx="38%" cy="32%" r="72%">
+              <stop offset="0" stop-color="#ffb86b" stop-opacity="0.26" />
+              <stop offset="0.6" stop-color="#ffb86b" stop-opacity="0.05" />
+              <stop offset="1" stop-color="#ffb86b" stop-opacity="0" />
+            </radialGradient>
+            <clipPath id="disc"><circle r="58" /></clipPath>
+          </defs>
+          <g transform="rotate(-16)">
+            <!-- far side of the ring and of the moon's way, behind the planet -->
+            <path class="ring" d="M -96 0 A 96 24 0 0 1 96 0" />
+            <circle class="moon" r="5">
+              <animateMotion dur="9s" repeatCount="indefinite" path="M 96 0 A 96 24 0 0 1 -96 0 A 96 24 0 0 1 96 0" />
+              <animate attributeName="opacity" values="0;1" keyTimes="0;0.5" calcMode="discrete" dur="9s" repeatCount="indefinite" />
+            </circle>
+            <!-- the planet that isn't there: a faint glow, a wireframe turning, a dashed outline -->
+            <circle r="58" fill="url(#glow)" />
+            <g class="grid" clip-path="url(#disc)">
+              <ellipse rx="29" ry="5.8" cy="-50" />
+              <ellipse rx="50" ry="10" cy="-29" />
+              <ellipse rx="58" ry="11.6" />
+              <ellipse rx="50" ry="10" cy="29" />
+              <ellipse rx="29" ry="5.8" cy="50" />
+              <ellipse ry="58" rx="0"><animate attributeName="rx" values="0;29;50;58;50;29;0" dur="8s" repeatCount="indefinite" /></ellipse>
+              <ellipse ry="58" rx="0"><animate attributeName="rx" values="0;29;50;58;50;29;0" dur="8s" begin="-1.333s" repeatCount="indefinite" /></ellipse>
+              <ellipse ry="58" rx="0"><animate attributeName="rx" values="0;29;50;58;50;29;0" dur="8s" begin="-2.667s" repeatCount="indefinite" /></ellipse>
+              <ellipse ry="58" rx="0"><animate attributeName="rx" values="0;29;50;58;50;29;0" dur="8s" begin="-4s" repeatCount="indefinite" /></ellipse>
+              <ellipse ry="58" rx="0"><animate attributeName="rx" values="0;29;50;58;50;29;0" dur="8s" begin="-5.333s" repeatCount="indefinite" /></ellipse>
+              <ellipse ry="58" rx="0"><animate attributeName="rx" values="0;29;50;58;50;29;0" dur="8s" begin="-6.667s" repeatCount="indefinite" /></ellipse>
+              <rect class="scan" x="-60" y="-3" width="120" height="6" />
+            </g>
+            <circle class="outline" r="58" />
+            <!-- near side of the ring and of the moon's way, in front -->
+            <path class="ring front" d="M 96 0 A 96 24 0 0 1 -96 0" />
+            <circle class="moon" r="5">
+              <animateMotion dur="9s" repeatCount="indefinite" path="M 96 0 A 96 24 0 0 1 -96 0 A 96 24 0 0 1 96 0" />
+              <animate attributeName="opacity" values="1;0" keyTimes="0;0.5" calcMode="discrete" dur="9s" repeatCount="indefinite" />
+            </circle>
+          </g>
+        </svg>
+        <span class="four">4</span>
+      </div>
+
+      <p class="kicker"><span class="kdot"></span>Fehler 404 · Signal verloren</p>
+      <h1>Hier ist nur leerer Raum.</h1>
+      <p class="text">
+        <span id="where">Unter dieser Adresse</span> gibt es keinen Planeten – vielleicht ein Tippfehler oder ein veralteter Link.
+      </p>
+      <div class="actions">
+        <a class="btn btn-primary" href="/" data-home=""
+          ><span>Zurück zur Sonne</span
+          ><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg
+        ></a>
+        <a class="btn" href="/#/spiel" data-home="#/spiel"><span>Minispiel spielen</span></a>
+      </div>
+      <p class="note">Koordinaten unbekannt · Fehlercode 404</p>
+    </main>
+
+    <script>
+      (function () {
+        var path = location.pathname;
+
+        // Which address was asked for (opened directly, there's nothing to show).
+        if (!/\/404(\.html)?$/.test(path)) {
+          var shown = path + location.search + location.hash;
+          try {
+            shown = decodeURI(shown);
+          } catch (e) {}
+          var where = document.getElementById("where");
+          var code = document.createElement("code");
+          code.textContent = shown;
+          where.textContent = "Unter ";
+          where.appendChild(code);
+        }
+
+        // Where the start page is. First a guess (on GitHub Pages a project lives in its own folder, the first one of
+        // the path), then a look: the deepest folder above this address that serves the start page.
+        var dirs = path.split("/").slice(1, -1);
+        function setHome(root) {
+          var links = document.querySelectorAll("[data-home]");
+          for (var i = 0; i < links.length; i++) links[i].href = root + links[i].getAttribute("data-home");
+        }
+        setHome(/\.github\.io$/i.test(location.hostname) && dirs.length ? "/" + dirs[0] + "/" : "/");
+
+        if (!window.fetch || !window.Promise) return;
+        var tries = [];
+        for (var i = dirs.length; i >= 0; i--) tries.push("/" + dirs.slice(0, i).join("/") + (i ? "/" : ""));
+        tries = tries.slice(-6);
+        Promise.all(
+          tries.map(function (url) {
+            // (asking for a page: servers that answer every path with the start page while developing then don't)
+            return fetch(url, { credentials: "same-origin", headers: { Accept: "text/html" } })
+              .then(function (r) {
+                return r.ok ? r.text() : "";
+              })
+              .then(
+                function (html) {
+                  // (the start page has the journey; index.html says so in a comment)
+                  return html.indexOf('id="journey"') > -1 ? html : "";
+                },
+                function () {
+                  return "";
+                },
+              );
+          }),
+        ).then(function (pages) {
+          for (var i = 0; i < pages.length; i++) {
+            if (!pages[i]) continue;
+            setHome(tries[i]);
+            // The site's own title, for the tab and the way home.
+            var m = /<title>([^<]*)<\/title>/i.exec(pages[i]);
+            if (m && window.DOMParser) {
+              var title = new DOMParser().parseFromString(m[1], "text/html").documentElement.textContent.trim();
+              if (title) {
+                document.title = "Seite nicht gefunden – " + title;
+                document.querySelector(".brand-name").textContent = title;
+              }
+            }
+            return;
+          }
+        });
+
+        // Without motion the little planet holds still too.
+        if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          var svg = document.querySelector(".ghost");
+          if (svg && svg.pauseAnimations) svg.pauseAnimations();
+        }
+      })();
+    </script>
+  </body>
+</html>

@@ -8,11 +8,24 @@ const route = (section: Section, project?: Project) => `#/${section.slug}${proje
 const external = (url: string, label: string, cls = "btn") =>
   `<a class="${cls}" href="${esc(url)}" target="_blank" rel="noopener noreferrer"><span>${esc(label)}</span>${ICON.external}</a>`;
 
+const num = (x: number) => x.toLocaleString("de-DE", { maximumFractionDigits: 1 });
+
+/** The head of a planet's data sheet: its number, name and a line of readings, like on the ship's screen. */
 function head(section: Section, sub: string) {
+  const moons = section.projects.length;
+  const readings = [`Umlaufbahn ${num(section.body.orbit)}`, `Radius ${num(section.body.radius)}`, moons ? `${moons} ${moons === 1 ? "Mond" : "Monde"}` : ""]
+    .filter(Boolean)
+    .join(" · ");
   return `
     <header class="sec-head" data-r>
-      <p class="kicker"><span class="kdot"></span>Planet ${pad2(section.number)} · ${esc(section.world)}</p>
-      <h2 class="sec-title" id="title-${section.slug}" tabindex="-1">${chars(section.name)}</h2>
+      <div class="sh-bar">
+        <p class="kicker"><span class="kdot"></span>Planet ${pad2(section.number)} · ${esc(section.world)}</p>
+        <p class="sh-data" aria-hidden="true">${readings}</p>
+      </div>
+      <div class="sh-main">
+        <span class="sh-num" aria-hidden="true">${pad2(section.number)}</span>
+        <h2 class="sec-title" id="title-${section.slug}" tabindex="-1">${chars(section.name)}</h2>
+      </div>
       ${sub ? `<p class="sec-sub">${esc(sub)}</p>` : ""}
     </header>`;
 }
@@ -89,8 +102,16 @@ function sectionProjects() {
 }
 
 function aboutView(section: Section) {
+  // A data cell each, two to a row. Long values get the whole row, and so does a short one that would stay alone in
+  // its row (the order of the text file stays).
+  const long = (i: number) => i < about.facts.length && about.facts[i].value.length > 30;
+  let column = 0;
   const facts = about.facts
-    .map((f) => `<div class="fact"><dt>${esc(f.label)}</dt><dd>${factValue(f.label, f.value)}</dd></div>`)
+    .map((f, i) => {
+      const wide = long(i) || (column === 0 && (i === about.facts.length - 1 || long(i + 1)));
+      column = wide ? 0 : (column + 1) % 2;
+      return `<div class="fact${wide ? " is-wide" : ""}"><dt>${esc(f.label)}</dt><dd>${factValue(f.label, f.value)}</dd></div>`;
+    })
     .join("");
   return `
     ${head(section, about.name)}
@@ -160,7 +181,7 @@ function projectsView(section: Section) {
       (p, i) => `
       <li data-r>
         <a class="proj-card" href="${route(section, p)}" data-project="${esc(p.id)}">
-          <span class="pc-index">${pad2(i + 1)}</span>
+          <span class="pc-index"><span class="pc-moon">Mond</span>${pad2(i + 1)}</span>
           <span class="pc-body">
             <span class="pc-title">${esc(p.shortTitle)}${p.subtitle ? ` <span class="pc-sub">${esc(p.subtitle)}</span>` : ""}</span>
             <span class="pc-meta">${esc(p.category)}${p.period ? ` · ${esc(p.period)}` : ""}</span>

@@ -8,6 +8,7 @@ import {
   renderDock,
   renderHero,
   renderLoader,
+  renderLost,
   renderMenu,
   renderStops,
   renderTopbar,
@@ -16,6 +17,8 @@ import {
   setSoundButton,
   setThumbnails,
 } from "./components";
+import type { GameHandle } from "../game/shooter";
+import { sampleHeading } from "./nameSample";
 import { Sound } from "./sound";
 import { projectView, sectionView, toggleSkill } from "./views";
 import { ICON, coarsePointer, copyText, nextFrame, reducedMotion, reveal, toast, wait } from "./util";
@@ -24,6 +27,12 @@ import { ICON, coarsePointer, copyText, nextFrame, reducedMotion, reveal, toast,
 interface Route {
   stop: number;
   projectId: string | null;
+  /** the mini game (#/spiel) */
+  game?: boolean;
+  /** an address that leads nowhere (shown on the 404 overlay) */
+  notFound?: string;
+  /** a project the planet in the address doesn't have (the planet is shown, with a note) */
+  missingProject?: string;
 }
 
 /** The scroll range in which the camera holds at a stop; between two ranges it travels. */
@@ -35,6 +44,15 @@ interface StopRange {
 }
 
 const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
+/** the address of the mini game */
+const GAME_HASH = "#/spiel";
+const decode = (s: string) => {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
+};
 const root = document.documentElement;
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const smooth = (a: number, b: number, x: number) => {
@@ -62,6 +80,7 @@ export class App {
   private scrim = $("#scrim");
   private dock = $("#dock");
   private menu = $("#menu");
+  private lostEl = $("#lost");
   private loader = $("#loader");
   private panelScroll!: HTMLElement;
   private panelContent!: HTMLElement;
@@ -79,10 +98,18 @@ export class App {
   private lastTime = 0;
   private measureQueued = false;
   private drawer: { projectId: string; pushed: boolean; returnFocus: HTMLElement | null } | null = null;
+  /** the 404 overlay, while it is open */
+  private lost: { returnFocus: HTMLElement | null } | null = null;
   private keyboardNav = false;
   private hoverPlanet: number | null = null;
   private hoverMoon: string | null = null;
   private started = false;
+  /** the intro where the name forms behind a passing ship (null when it is not running) */
+  private naming: { startScroll: number; width: number; height: number; fallback: number } | null = null;
+  private game: GameHandle | null = null;
+  private gameLoading = false;
+  private shipTip = document.createElement("div");
+  private mousePointer = false;
 
   constructor() {
     this.lenis = new Lenis({
@@ -119,7 +146,7 @@ export class App {
     }
     if (!this.universe) {
       root.classList.add("no-webgl");
-      setLoaderProgress(this.loader, 1, "Bereit");
+      setLoaderProgress(this.loader, 1, "Startklar");
       const loop = (t: number) => {
         this.frame(t);
         requestAnimationFrame(loop);
@@ -128,6 +155,9 @@ export class App {
     }
 
     await Promise.race([document.fonts?.ready, wait(1500)]);
+    // (now the layout is final: the framing again, and the black hole placed for it)
+    this.computeFrames();
+    if (this.frames) this.universe?.placeBlackHole(this.frames.overview);
     this.measure();
     this.started = true;
 
@@ -147,9 +177,12 @@ export class App {
       onFrame: (f) => this.labels?.update(f),
       beforeFrame: (time) => this.frame(time),
       onProgress: (p, label) => setLoaderProgress(this.loader, p * 0.9, label),
+      onWarp: (phase) => (phase === "enter" ? this.sound.jump() : this.sound.dropOut()),
     });
     this.universe = universe;
     this.computeFrames();
+    // (the sky is laid out for the overview's framing: the Milky Way and the black hole go where they show well)
+    if (this.frames) universe.setFrame(this.frames.overview);
     await universe.init();
     setThumbnails(universe.thumbnails(160));
     this.labels = new Labels(this.labelsEl, {
@@ -168,20 +201,70 @@ export class App {
       },
     });
     this.computeFrames();
-    setLoaderProgress(this.loader, 1, "Bereit");
+    setLoaderProgress(this.loader, 1, "Startklar");
     universe.start();
   }
 
   private onSceneHover(t: PickTarget | null) {
     this.stage.classList.toggle("is-pointing", !!t);
     this.labels?.setHover(t?.type === "planet" ? t.index : null, t?.type === "moon" ? t.projectId : null);
-    if (t) this.sound.blip(t.type === "planet" ? 1 + t.index * 0.04 : t.type === "moon" ? 1.5 : 0.8);
+    this.shipTip.classList.toggle("is-on", t?.type === "ship" && this.mousePointer);
+    if (t) this.sound.blip(t.type === "planet" ? 1 + t.index * 0.04 : t.type === "moon" ? 1.5 : t.type === "ship" ? 1.8 : 0.8);
   }
 
   private onSceneSelect(t: PickTarget) {
     if (t.type === "sun") this.goToStop(0);
     else if (t.type === "planet") this.goToStop(t.index + 1);
+    else if (t.type === "ship") this.openGame(true);
     else this.open(`#/${sections[t.index].slug}/${t.projectId}`);
+  }
+
+  // ---------- The mini game (a click on a ship, or #/spiel) ----------
+
+  private async openGame(push: boolean) {
+    if (this.game || this.gameLoading) return;
+    this.gameLoading = true;
+    this.closeMenu(false);
+    if (this.lost) this.closeLost(true);
+    if (this.drawer) this.closeDrawer(true);
+    if (this.naming) this.finishNaming(true);
+    this.shipTip.classList.remove("is-on");
+    const returnFocus = document.activeElement as HTMLElement | null;
+    try {
+      const { openGame } = await import("../game/shooter");
+      // (the address shows the game while it is open; a pushed entry lets "back" close it)
+      const pushed = push && location.hash !== GAME_HASH;
+      if (pushed) history.pushState(null, "", GAME_HASH);
+      else if (location.hash !== GAME_HASH) history.replaceState(null, "", GAME_HASH);
+      this.universe?.stop();
+      this.lenis.stop();
+      root.classList.add("game-open");
+      this.game = openGame({
+        audio: this.sound,
+        reducedMotion: reducedMotion.matches,
+        onClose: () => this.afterGame(pushed, returnFocus),
+      });
+      document.title = ["Sternenschwarm", about.siteTitle || about.name].join(" – ");
+    } catch (err) {
+      console.warn("Das Spiel konnte nicht geladen werden.", err);
+      toast("Das Spiel konnte nicht geladen werden");
+    } finally {
+      this.gameLoading = false;
+    }
+  }
+
+  private afterGame(pushed: boolean, returnFocus: HTMLElement | null) {
+    this.game = null;
+    root.classList.remove("game-open");
+    if (!document.hidden) this.universe?.start();
+    if (!this.drawer && this.menu.hidden) this.lenis.start();
+    const section = this.current > 0 ? sections[this.current - 1] : null;
+    if (location.hash === GAME_HASH) {
+      if (pushed) history.back();
+      else history.replaceState(null, "", section ? `#/${section.slug}` : "#/");
+    }
+    document.title = [section?.name, about.siteTitle || about.name].filter(Boolean).join(" – ");
+    returnFocus?.focus?.({ preventScroll: true });
   }
 
   // ---------- The journey: scroll position → where the camera is ----------
@@ -193,11 +276,15 @@ export class App {
     this.lenis.raf(time);
     if (!this.ranges.length) return;
 
+    // Scrolling during the name intro skips it: the heading shows at once.
+    if (this.naming && Math.abs(this.lenis.scroll - this.naming.startScroll) > 4) this.finishNaming(true);
+
     const j = this.journeyAt(this.lenis.scroll);
     this.universe?.setJourney(j);
 
     const position = j.from + (j.to - j.from) * j.t;
     this.sound.flight(dt > 0 ? (position - this.position) / dt : 0);
+    this.sound.warp(this.universe?.warpLevel ?? 0);
     this.position = position;
 
     const stop = j.from === j.to ? j.from : j.t < 0.5 ? j.from : j.to;
@@ -240,7 +327,7 @@ export class App {
     const section = stop > 0 ? sections[stop - 1] : null;
     root.style.setProperty("--accent", section?.accent ?? HOME_ACCENT);
     setDockActive(this.dock, stop);
-    if (!this.drawer && this.started) {
+    if (!this.drawer && !this.lost && this.started) {
       const hash = section ? `#/${section.slug}` : "#/";
       if (location.hash !== hash && !(hash === "#/" && !location.hash)) history.replaceState(null, "", hash);
       document.title = [section?.name, about.siteTitle || about.name].filter(Boolean).join(" – ");
@@ -273,6 +360,8 @@ export class App {
     this.measureQueued = true;
     requestAnimationFrame(() => {
       this.measureQueued = false;
+      // (after a resize the particles of the name intro would aim at the old layout)
+      if (this.naming && (window.innerWidth !== this.naming.width || window.innerHeight !== this.naming.height)) this.finishNaming(true);
       this.universe?.resize();
       this.computeFrames();
       this.measure();
@@ -316,25 +405,38 @@ export class App {
   // ---------- Navigation ----------
 
   private parse(hash: string): Route {
-    const parts = hash
-      .replace(/^#\/?/, "")
-      .split("/")
-      .filter(Boolean)
-      .map((p) => decodeURIComponent(p));
+    if (hash === GAME_HASH) return { stop: 0, projectId: null, game: true };
+    const parts = hash.replace(/^#\/?/, "").split("/").filter(Boolean).map(decode);
     if (!parts.length) return { stop: 0, projectId: null };
-    const section = sectionBySlug(parts[0]);
+    // (addresses are matched without regard to case: "#/Kontakt" is the contact planet too)
+    const [first, second] = parts.map((p) => p.toLowerCase());
+    const section = sectionBySlug(first);
     if (!section) {
-      const s = sectionOfProject(parts[0]);
-      return s ? { stop: s.number, projectId: parts[0] } : { stop: 0, projectId: null };
+      // Older links name only the project; anything else leads nowhere.
+      const s = sectionOfProject(first);
+      return s ? { stop: s.number, projectId: first } : { stop: 0, projectId: null, notFound: decode(hash) };
     }
-    const projectId = parts[1] && section.projects.some((p) => p.id === parts[1]) ? parts[1] : null;
-    return { stop: section.number, projectId };
+    if (!second) return { stop: section.number, projectId: null };
+    const project = section.projects.find((p) => p.id === second);
+    return project ? { stop: section.number, projectId: project.id } : { stop: section.number, projectId: null, missingProject: parts[1] };
   }
 
   /** Every in-page link ("#/…") comes through here. */
   private open(hash: string) {
+    if (hash === GAME_HASH) {
+      this.openGame(true);
+      return;
+    }
     const route = this.parse(hash);
     this.closeMenu(false);
+    if (route.notFound) {
+      if (this.drawer) this.closeDrawer(false);
+      history.pushState(null, "", hash);
+      this.showLost(route.notFound);
+      return;
+    }
+    if (this.lost) this.closeLost(true);
+    if (route.missingProject) this.noteMissing(route.missingProject);
     if (route.projectId) {
       if (this.drawer) history.replaceState(null, "", hash);
       else history.pushState(null, "", hash);
@@ -363,11 +465,17 @@ export class App {
       done();
       return;
     }
+    const duration = Math.min(3.4, 1.2 + distance * 0.4);
+    // A hop to the neighbouring planet stays in normal space (hyperspace is for fast scrolling and long jumps).
+    this.universe?.calmFlight(distance < 1.5 ? duration + 0.4 : 0);
     this.lenis.scrollTo(range.land, {
-      duration: Math.min(3.4, 1.2 + distance * 0.4),
+      duration,
       easing: easeInOutCubic,
       force: true,
-      onComplete: done,
+      onComplete: () => {
+        this.universe?.calmFlight(0);
+        done();
+      },
     });
   }
 
@@ -467,16 +575,62 @@ export class App {
     if (returnFocus) this.topbar.querySelector<HTMLElement>(".menu-btn")?.focus({ preventScroll: true });
   }
 
+  // ---------- 404 overlay: an address inside the page that leads nowhere ----------
+
+  private showLost(address: string) {
+    this.closeMenu(false);
+    if (this.naming) this.finishNaming(true);
+    const opening = !this.lost;
+    this.lost = { returnFocus: opening ? (document.activeElement as HTMLElement | null) : this.lost!.returnFocus };
+    renderLost(this.lostEl, address);
+    this.lostEl.hidden = false;
+    root.classList.add("lost-open");
+    this.lenis.stop();
+    document.title = ["Nicht gefunden", about.siteTitle || about.name].join(" – ");
+    requestAnimationFrame(() => {
+      this.lostEl.classList.add("is-open");
+      reveal(this.lostEl.querySelector<HTMLElement>(".lost-inner")!);
+      this.lostEl.querySelector<HTMLElement>("#lost-title")?.focus({ preventScroll: true });
+    });
+  }
+
+  /** `updateHistory`: the address goes back to where the camera is (the address that led nowhere is replaced). */
+  private closeLost(updateHistory: boolean) {
+    const lost = this.lost;
+    if (!lost) return;
+    this.lost = null;
+    this.lostEl.classList.remove("is-open");
+    root.classList.remove("lost-open");
+    if (!this.drawer && this.menu.hidden && !this.game) this.lenis.start();
+    const section = this.current > 0 ? sections[this.current - 1] : null;
+    if (updateHistory) history.replaceState(null, "", section ? `#/${section.slug}` : "#/");
+    document.title = [section?.name, about.siteTitle || about.name].filter(Boolean).join(" – ");
+    window.setTimeout(() => {
+      if (!this.lost) this.lostEl.hidden = true;
+    }, reducedMotion.matches ? 0 : 600);
+    lost.returnFocus?.focus?.({ preventScroll: true });
+  }
+
+  /** A link to a project its planet doesn't have: the planet is shown, with a short note. */
+  private noteMissing(id: string) {
+    toast(`Projekt „${id}“ gibt es auf diesem Planeten nicht`);
+  }
+
   // ---------- Loader, reveals ----------
 
   private async hideLoader(route: Route) {
+    // Opened with a link to the game: straight into it.
+    const wantsGame = !!route.game;
+    // Opened with a link to a planet or a project: start right there, otherwise fly in from far away.
+    const intro = route.stop === 0 && !wantsGame;
     await wait(reducedMotion.matches ? 0 : 250);
+    // (the start: the loading screen jumps into hyperspace, and the scene drops out of it)
+    this.loader.classList.toggle("is-jump", intro && !reducedMotion.matches);
     this.loader.classList.add("is-done");
     root.classList.remove("is-loading");
     // (scrolling only works once the page may scroll again: a stopped Lenis clips the page)
     this.lenis.start();
-    // Opened with a link to a planet or a project: start right there, otherwise fly in from far away.
-    const intro = route.stop === 0;
+    if (wantsGame) window.setTimeout(() => this.openGame(false), 0);
     if (!intro) {
       await nextFrame();
       this.measure();
@@ -488,9 +642,58 @@ export class App {
       }
     }
     if (route.projectId) this.showProject(route.stop, route.projectId, false);
+    if (route.missingProject) window.setTimeout(() => this.noteMissing(route.missingProject!), reducedMotion.matches ? 0 : 900);
     if (intro) this.universe?.playIntro();
-    window.setTimeout(() => reveal(this.hero.querySelector<HTMLElement>(".hero-inner")!), intro && !reducedMotion.matches ? 900 : 0);
     window.setTimeout(() => this.loader.remove(), 1400);
+    // Lost: the flight in plays behind the 404 overlay, and the start waits underneath, ready.
+    if (route.notFound) {
+      reveal(this.hero.querySelector<HTMLElement>(".hero-inner")!);
+      this.showLost(route.notFound);
+      return;
+    }
+    // The name gathers out of the stars; the rest of the hero follows once it is there.
+    const naming = intro && !reducedMotion.matches && (await this.startNaming());
+    if (!naming) {
+      window.setTimeout(() => reveal(this.hero.querySelector<HTMLElement>(".hero-inner")!), intro && !reducedMotion.matches ? 900 : 0);
+    }
+  }
+
+  private async startNaming() {
+    const universe = this.universe;
+    const title = this.hero.querySelector<HTMLElement>("#hero-title");
+    if (!universe || !title) return false;
+    this.hero.classList.add("name-intro");
+    const sample = await sampleHeading(title).catch(() => null);
+    if (!sample || sample.points.length < 80) {
+      this.hero.classList.remove("name-intro");
+      return false;
+    }
+    this.naming = {
+      startScroll: this.lenis.scroll,
+      width: window.innerWidth,
+      height: window.innerHeight,
+      // (should the frame loop stall, the heading still shows up)
+      fallback: window.setTimeout(() => this.finishNaming(true), 12000),
+    };
+    universe.playNameIntro({
+      points: sample.points,
+      rect: sample.rect,
+      // (the canvas fills the stage, which leaves out the scrollbar)
+      viewport: { width: this.stage.clientWidth || window.innerWidth, height: this.stage.clientHeight || window.innerHeight },
+      dot: sample.dot,
+      onReveal: () => this.finishNaming(false),
+    });
+    return true;
+  }
+
+  /** The heading takes over from the particles (`abort`: right away, the particles vanish). */
+  private finishNaming(abort: boolean) {
+    if (!this.naming) return;
+    window.clearTimeout(this.naming.fallback);
+    this.naming = null;
+    if (abort) this.universe?.endNameIntro();
+    this.hero.classList.add("is-named");
+    reveal(this.hero.querySelector<HTMLElement>(".hero-inner")!);
   }
 
   /** Card contents fade in as they scroll into view. */
@@ -520,7 +723,7 @@ export class App {
     document.addEventListener("visibilitychange", () => {
       if (!this.universe) return;
       if (document.hidden) this.universe.stop();
-      else this.universe.start();
+      else if (!this.game) this.universe.start();
     });
     reducedMotion.addEventListener?.("change", () => this.universe?.setReducedMotion(reducedMotion.matches));
 
@@ -531,7 +734,20 @@ export class App {
       this.universe?.pointerDown(...pos(e), e.pointerType !== "mouse");
       this.stage.classList.add("is-down");
     });
-    this.stage.addEventListener("pointermove", (e) => this.universe?.pointerMove(...pos(e), e.pointerType !== "mouse"));
+    this.stage.addEventListener("pointermove", (e) => {
+      this.mousePointer = e.pointerType === "mouse";
+      // (beside the pointer; on its left near the right edge)
+      const tipW = this.shipTip.offsetWidth || 220;
+      const tipX = e.clientX + 18 + tipW > window.innerWidth - 8 ? e.clientX - 18 - tipW : e.clientX + 18;
+      this.shipTip.style.setProperty("--x", `${Math.max(8, tipX)}px`);
+      this.shipTip.style.setProperty("--y", `${e.clientY + 20}px`);
+      this.universe?.pointerMove(...pos(e), e.pointerType !== "mouse");
+    });
+    this.stage.addEventListener("pointerleave", () => this.shipTip.classList.remove("is-on"));
+    this.shipTip.className = "ship-tip";
+    this.shipTip.setAttribute("aria-hidden", "true");
+    this.shipTip.textContent = "Klicken: Minispiel starten";
+    document.body.appendChild(this.shipTip);
     this.stage.addEventListener("pointerup", (e) => {
       this.stage.classList.remove("is-down");
       this.universe?.pointerUp(...pos(e), e.pointerType !== "mouse");
@@ -552,6 +768,7 @@ export class App {
         this.open(link.getAttribute("href") ?? "#/");
         return;
       }
+      if (hit(".lost-close") || (this.lost && t === this.lostEl)) return this.closeLost(true);
       if (hit(".menu-btn")) return this.menu.hidden ? this.openMenu() : this.closeMenu();
       if (hit(".menu-close")) return this.closeMenu();
       if (hit(".sound-btn")) {
@@ -595,7 +812,23 @@ export class App {
   }
 
   private onPop() {
+    // Back out of the game closes it; forward into it opens it again.
+    if (location.hash === GAME_HASH) {
+      if (!this.game) this.openGame(false);
+      return;
+    }
+    if (this.game) {
+      this.game.close();
+      return;
+    }
     const route = this.parse(location.hash);
+    if (route.notFound) {
+      if (this.drawer) this.closeDrawer(false);
+      this.showLost(route.notFound);
+      return;
+    }
+    if (this.lost) this.closeLost(false);
+    if (route.missingProject) this.noteMissing(route.missingProject);
     if (route.projectId) {
       if (this.drawer?.projectId !== route.projectId) this.showProject(route.stop, route.projectId, false);
       return;
@@ -606,10 +839,21 @@ export class App {
 
   private onKey(e: KeyboardEvent) {
     this.keyboardNav = true;
+    // (the game has its own keys)
+    if (this.game || this.gameLoading) return;
     if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
     const target = e.target as HTMLElement;
     if (target.closest("input, textarea, select, [contenteditable='true']")) return;
 
+    if (this.lost) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        this.closeLost(true);
+      } else if (e.key === "Tab") {
+        this.trapFocus(e, this.lostEl);
+      }
+      return;
+    }
     if (!this.menu.hidden) {
       if (e.key === "Escape") {
         e.preventDefault();

@@ -21,7 +21,7 @@ während sein Inhalt daneben vorbeizieht, und fliegt beim Weiterscrollen zum nä
 Gebaut mit [Vite](https://vite.dev), TypeScript, [three.js](https://threejs.org) und [Lenis](https://lenis.darkroom.engineering)
 (sanftes Scrollen). Alle Planeten, Wolken, Polarlichter, Ringe, die Sonne, der Nebel und die Sterne entstehen in
 eigenen GLSL-Shadern, mit Bloom für alles, was leuchtet: Es gibt keine Bild- oder Modelldateien, die geladen werden
-müssen. Schriften (Unbounded, Inter, JetBrains Mono) werden über npm installiert und lokal ausgeliefert.
+müssen. Schriften (Tektur, Inter, JetBrains Mono) werden über npm installiert und lokal ausgeliefert.
 
 ## Lokal starten
 
@@ -54,6 +54,12 @@ Vite zeigt danach eine Netzwerk-Adresse an (z. B. `http://192.168.x.x:5173`), di
 > Hinweis: `dist/index.html` lässt sich nicht per Doppelklick (`file://`) öffnen, weil Browser dort keine
 > JavaScript-Module laden. Immer über `npm run preview` oder einen anderen lokalen Webserver starten.
 > Der Build verwendet relative Pfade und läuft deshalb auch in einem Unterordner (z. B. GitHub Pages).
+
+### Die 404-Seite testen
+
+Unbekannte Pfade beantworten `npm run dev` und `npm run preview` wie ein echter Webserver mit der 404-Seite,
+z. B. **http://localhost:5173/gibtsnicht**. Eine unbekannte Adresse innerhalb der Seite (z. B. `#/gibtsnicht`)
+zeigt das 404-Fenster der App über dem Sonnensystem.
 
 ## Inhalte ändern
 
@@ -114,8 +120,50 @@ greifen nur bei genau diesen Originalsätzen. Ändert sich der Text in der Datei
 | `Esc`                          | Projekt schließen bzw. zurück zum Start          |
 | `M`                            | Menü                                             |
 | Seitwärts ziehen               | System bzw. Blick um den Planeten drehen         |
+| Klick / Tippen auf ein Raumschiff | Minispiel „Sternenschwarm“ (auch über `#/spiel`) |
 
 Ton ist standardmäßig aus und lässt sich oben rechts einschalten (die Klänge werden live per Web Audio erzeugt).
+
+### Ladebildschirm, Intro, Hyperraum, Raumschlacht und Minispiel
+
+- **Ladebildschirm:** steht schon in `index.html` und ist damit ab dem ersten Bild da, bevor das Skript geladen
+  ist: Sterne ziehen vorbei, der Name erscheint, und sobald das Skript läuft, kommen die acht Planeten auf ihren
+  (verkleinerten) echten Bahnen dazu und leuchten nacheinander auf, während die Szene aufgebaut wird. Darunter
+  Fortschritt in Prozent und der aktuelle Schritt. Alles, was sich bewegt, läuft über CSS (`transform`/`opacity`)
+  und ruckelt deshalb nicht, während der Browser Shader kompiliert. Am Ende springt der Bildschirm in den
+  Hyperraum, und die Szene fällt aus ihm heraus. Dauert das Laden länger als 12 Sekunden, steht ein Hinweis da;
+  kommt ein Skript nicht an oder schlägt der Start fehl, gibt es eine Meldung mit „Neu laden“.
+- **Intro:** Die Kamera fällt aus dem Hyperraum ins System. Danach leuchten am Himmel Sterne auf, ziehen in einem
+  Wirbel zusammen und schreiben den Namen von links nach rechts; er steht kurz als Sternbild am Himmel, dann
+  übernimmt die Überschrift an genau derselben Stelle (die Sterne fliegen zu Punkten, die aus der echten
+  Überschrift abgetastet werden, `src/three/nameIntro.ts`). Scrollen überspringt das Intro.
+- **Angezeigter Name:** Die Seite zeigt nur den Nachnamen aus `Name:` der Textdatei (`src/content/index.ts`,
+  für den Seitentitel auch `vite.config.ts`).
+- **Hyperraum:** nur bei schnellem Scrollen (oder einem Sprung über mehrere Planeten): Die Sterne werden zu
+  Streifen, das Bild verschwimmt zum Fluchtpunkt hin, mit einem Blitz beim Ein- und Austritt
+  (`src/three/hyperspace.ts`). Ruhiges Scrollen und der Flug zum Nachbarplaneten bleiben im normalen Raum. Die
+  Schwelle steht in `src/three/universe.ts` (`updateWarp`).
+- **Raumschlacht:** Zwei Fraktionen mit eigenen Jäger- und Großkampfschiff-Entwürfen kämpfen im Hintergrund
+  (`src/three/fleet.ts`). Zeigt man auf ein Schiff, läuft der Kampf langsamer.
+- **Minispiel:** `src/game/shooter.ts`, ein Weltraum-Shooter mit Alien-Wellen, Power-ups und einer Schwarmkönigin
+  in jeder fünften Welle. Wird erst beim Öffnen nachgeladen; der Rekord wird im Browser gespeichert.
+
+Mit „Bewegung reduzieren“ gibt es kein Intro, keinen Hyperraum und keine Schlacht; das Spiel bleibt über das
+Menü („Minispiel“) und auf dem Desktop über den Link im Hero erreichbar.
+
+### Planeten-Datenblatt und 404
+
+- **Datenblatt:** Die Inhalte jedes Planeten stehen auf einem kantigen Panel wie auf einem Bordbildschirm:
+  Kennung und Messwerte (Umlaufbahn, Radius, Monde aus `src/config/sections.ts`), große Nummer, Name in Tektur,
+  darunter ein Lineal in der Farbe des Planeten. Fakten als Datenzellen, Projekte als Monde mit Nummer.
+- **404 auf dem Server:** `public/404.html` wird von GitHub Pages, Netlify, Vercel und den meisten Hostern für
+  unbekannte Pfade ausgeliefert. Weil sie in jeder Ordnertiefe erscheinen kann, ist sie komplett eigenständig
+  (Styles, Skript und Grafik inline, Systemschriften). Den Weg zur Startseite sucht sie selbst: Sie fragt die
+  Ordner über der Adresse ab und nimmt den tiefsten, der die Startseite liefert (erkannt an `id="journey"` in
+  `index.html`).
+- **404 in der Seite:** Eine unbekannte Adresse wie `#/gibtsnicht` öffnet ein 404-Fenster über dem
+  Sonnensystem, mit Wegen zur Sonne, zum Minispiel und zu jedem Planeten (`Esc` schließt es). Ein Link auf ein
+  Projekt, das der Planet nicht hat (`#/web/gibtsnicht`), fliegt zum Planeten und sagt es kurz an.
 
 ## Barrierefreiheit und Leistung
 
@@ -131,7 +179,7 @@ Ton ist standardmäßig aus und lässt sich oben rechts einschalten (die Klänge
 ## Projektstruktur
 
 ```
-index.html                 Grundgerüst der Seite
+index.html                 Grundgerüst der Seite, mit dem Ladebildschirm
 scripts/
   build-content.mjs        npm run content
   content/parse.mjs        liest portfolio-daten.txt
@@ -140,8 +188,9 @@ src/
   main.ts                  Einstieg (Schriften, Styles, App)
   content/                 Daten aus der Textdatei, Zeitleiste, Skill-Zuordnung
   config/sections.ts       die acht Planeten: Name, Farbe, Oberfläche, Umlaufbahn
-  three/                   3D: Shader, Planeten, Monde, Sonne, Himmel, Kamera
+  three/                   3D: Shader, Planeten, Monde, Sonne, Himmel, Kamera, Hyperraum, Raumschlacht, Intro
   ui/                      Oberfläche: Scroll-Reise, Hero, Karten, Projekt-Schublade, Dock, Labels, Menü, Ton
+  game/                    das Minispiel (wird nachgeladen)
   styles/main.css          Gestaltung
-public/                    statische Dateien (Favicon, Projektbilder unter assets/)
+public/                    statische Dateien (Favicon, 404.html, Projektbilder unter assets/)
 ```

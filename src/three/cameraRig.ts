@@ -36,6 +36,9 @@ const smooth = (a: number, b: number, x: number) => {
 export class CameraRig {
   readonly camera: THREE.PerspectiveCamera;
   reducedMotion = false;
+  /** 0…1: how deep in hyperspace the camera is (set by the universe each frame) */
+  warp = 0;
+  private clock = 0;
   private bodies: PlanetBody[] = [];
   private journey: Journey = { from: 0, to: 0, t: 0, hold: 0 };
   private intro: { from: THREE.Vector3; t: number; duration: number } | null = null;
@@ -76,6 +79,53 @@ export class CameraRig {
     const prev = this.journey.t < 0.5 ? this.journey.from : this.journey.to;
     if (stop !== prev) this.orbitYawTarget = 0;
     this.journey = j;
+  }
+
+  get journeyState(): Readonly<Journey> {
+    return this.journey;
+  }
+
+  /** The point the camera looks at. */
+  get lookTarget(): THREE.Vector3 {
+    return this.target;
+  }
+
+  /** 0 → 1 while the intro flight runs, otherwise null. */
+  get introProgress(): number | null {
+    return this.intro ? this.intro.t : null;
+  }
+
+  /** The current shift of the projection centre in CSS pixels (see Frame). */
+  get projectionShift(): THREE.Vector2 {
+    return this.offset;
+  }
+
+  /**
+   * The overview camera's axes and focal length (for placing things in the sky), without moving the camera.
+   * `frame`: the overview's framing, when the current one is a planet's.
+   */
+  overviewView(frame: Frame = this.frame) {
+    const pos = new THREE.Vector3();
+    const target = new THREE.Vector3();
+    const current = this.frame;
+    this.frame = frame;
+    this.overviewPose(pos, target);
+    this.frame = current;
+    const dir = target.sub(pos).normalize();
+    const right = new THREE.Vector3().crossVectors(dir, UP).normalize();
+    const up = new THREE.Vector3().crossVectors(right, dir).normalize();
+    const focal = frame.height / 2 / Math.tan(THREE.MathUtils.degToRad(this.baseFov / 2));
+    return { dir, right, up, focal, freeWidth: frame.freeWidth, freeHeight: frame.freeHeight, portrait: frame.width < frame.height };
+  }
+
+  /** The sky direction that shows at a place of the overview's free area (fractions of it from its centre: right, up). */
+  overviewSkyDirection(u: number, v: number, frame: Frame = this.frame) {
+    const o = this.overviewView(frame);
+    return o.dir
+      .clone()
+      .addScaledVector(o.right, (u * o.freeWidth) / o.focal)
+      .addScaledVector(o.up, (v * o.freeHeight) / o.focal)
+      .normalize();
   }
 
   /** The planet the camera is at (or about to reach), null in the overview. */
@@ -177,6 +227,7 @@ export class CameraRig {
 
   update(dt: number) {
     const k = (rate: number) => 1 - Math.exp(-dt * rate);
+    this.clock += dt;
     this.parallax.lerp(this.parallaxTarget, k(2.5));
     this.orbitYaw += (this.orbitYawTarget - this.orbitYaw) * k(5);
     this.azimuthVel *= Math.exp(-dt * 3);
@@ -219,7 +270,16 @@ export class CameraRig {
     const cam = this.camera;
     cam.position.copy(this.pos);
     cam.lookAt(this.target);
-    const fov = this.baseFov + fovKick;
+    // Hyperspace: the view widens and shakes a little.
+    const warp = this.reducedMotion ? 0 : this.warp;
+    if (warp > 0.01) {
+      const w = warp * warp;
+      const c = this.clock;
+      cam.rotateZ((Math.sin(c * 17.3) * 0.6 + Math.sin(c * 31.7) * 0.4) * 0.005 * w);
+      cam.rotateX((Math.sin(c * 23.1) + Math.sin(c * 41.3)) * 0.0009 * w);
+      cam.rotateY((Math.sin(c * 19.7) + Math.sin(c * 37.9)) * 0.0009 * w);
+    }
+    const fov = this.baseFov + fovKick + warp * 16;
     if (Math.abs(cam.fov - fov) > 0.001) {
       cam.fov = fov;
       cam.updateProjectionMatrix();

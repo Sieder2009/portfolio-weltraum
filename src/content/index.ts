@@ -18,8 +18,17 @@ const WORDING: Record<string, string> = {
 
 const adapt = (s: string) => WORDING[s] ?? s;
 
+/**
+ * On this site the name is shown as the family name only ("Thomas Johann Sieder" → "Sieder"), everywhere: the intro,
+ * the top bar, the "about me" card and the page title. (vite.config.ts does the same for the page title in the HTML.)
+ */
+const fullName = source.about.name.trim();
+const displayName = fullName.split(/\s+/).pop() || fullName;
+
 export const about: About = {
   ...source.about,
+  name: displayName,
+  siteTitle: fullName ? source.about.siteTitle.replaceAll(fullName, displayName) : source.about.siteTitle,
   greeting: adapt(source.about.greeting),
   intro: adapt(source.about.intro),
   text: source.about.text.map(adapt),

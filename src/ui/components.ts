@@ -1,7 +1,7 @@
 import { about, githubSince, projects, skillCount } from "../content";
 import { sections } from "../config/sections";
 import type { LabelFrame } from "../three/universe";
-import { ICON, chars, coarsePointer, esc, initials, pad2, prettyUrl, roll } from "./util";
+import { ICON, chars, coarsePointer, esc, initials, pad2, prettyUrl, reducedMotion, roll } from "./util";
 
 // ---------- Top bar ----------
 
@@ -38,9 +38,13 @@ export function renderHero(el: HTMLElement) {
   const since = githubSince();
   const firstSection = sections[0];
   const timelineSection = sections.find((s) => s.kind === "timeline");
-  const hint = coarsePointer.matches
-    ? "Wischen fliegt zum nächsten Planeten · Planet antippen springt direkt hin"
-    : `Scrollen fliegt zum nächsten Planeten · <kbd>←</kbd><kbd>→</kbd> springen · Ziehen dreht das System`;
+  // (the ships of the background battle open a mini game; without motion there are no ships, only the link)
+  const game = reducedMotion.matches ? "Minispiel starten" : `${coarsePointer.matches ? "Raumschiff antippen" : "Raumschiff anklicken"}: Minispiel`;
+  const hint =
+    (coarsePointer.matches
+      ? "Wischen fliegt zum nächsten Planeten · Planet antippen springt direkt hin"
+      : `Scrollen fliegt zum nächsten Planeten · <kbd>←</kbd><kbd>→</kbd> springen · Ziehen dreht das System`) +
+    ` · <a class="hint-link" href="#/spiel">${game}</a>`;
   el.innerHTML = `
     <div class="hero-inner">
       <p class="kicker" data-r><span class="kdot"></span>${esc(about.githubName || "Portfolio")} · Portfolio</p>
@@ -118,9 +122,13 @@ export function setDockActive(el: HTMLElement, index: number) {
   });
 }
 
+/** pictures of the real planets, once the scene has drawn them (for parts rendered later, like the 404 overlay) */
+let thumbs: string[] = [];
+
 /** Swaps the CSS stand-ins for pictures of the real planets. */
-export function setThumbnails(urls: string[]) {
-  document.querySelectorAll<HTMLElement>("[data-thumb]").forEach((el) => {
+export function setThumbnails(urls: string[], root: ParentNode = document) {
+  thumbs = urls;
+  root.querySelectorAll<HTMLElement>("[data-thumb]").forEach((el) => {
     const url = urls[Number(el.dataset.thumb)];
     if (!url) return;
     let img = el.querySelector("img");
@@ -259,24 +267,118 @@ export function renderMenu(el: HTMLElement) {
       <nav aria-label="Alle Bereiche"><ol class="menu-list">${rows.join("")}</ol></nav>
       <div class="menu-foot">
         ${about.links.map((l) => `<a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.label)} <span>${esc(prettyUrl(l.url))}</span></a>`).join("")}
+        <a href="#/spiel">Minispiel <span>Sternenschwarm</span></a>
       </div>
     </div>`;
 }
 
 // ---------- Loader ----------
+// The loading screen is in index.html from the first paint (sun, name, bar). Once the scripts are there, the planets
+// join on their orbits and light up one after another while the scene is built.
+
+interface LoaderState {
+  target: number;
+  shown: number;
+  last: number;
+  pct: string;
+  orbits: HTMLElement[];
+}
+
+const loaders = new WeakMap<HTMLElement, LoaderState>();
 
 export function renderLoader(el: HTMLElement) {
-  el.innerHTML = `
-    <div class="loader-center">
-      <div class="loader-orbit" aria-hidden="true"><span class="lo-sun"></span><span class="lo-ring"><span class="lo-planet"></span></span></div>
-      <p class="loader-name">${chars(about.name)}</p>
-      <div class="loader-bar"><span></span></div>
-      <p class="loader-status">Sonnensystem wird geladen</p>
-    </div>`;
-  requestAnimationFrame(() => el.classList.add("is-in"));
+  const system = el.querySelector<HTMLElement>(".loader-system");
+  if (system && !system.querySelector(".lo-orbit")) {
+    const orbits = sections.map((s) => s.body.orbit);
+    const sizes = sections.map((s) => s.body.radius);
+    const [o0, o1] = [Math.min(...orbits), Math.max(...orbits)];
+    const [s0, s1] = [Math.min(...sizes), Math.max(...sizes)];
+    system.insertAdjacentHTML(
+      "beforeend",
+      sections
+        .map((s, i) => {
+          // (the real orbits and sizes, scaled down; inner planets turn faster, as with Kepler)
+          const r = 64 + ((s.body.orbit - o0) / Math.max(1e-6, o1 - o0)) * 90;
+          const size = 5 + ((s.body.radius - s0) / Math.max(1e-6, s1 - s0)) * 5;
+          const period = 5.5 * Math.pow(r / 64, 1.5);
+          const phase = (i * 0.618034) % 1;
+          return `<span class="lo-orbit" style="--r:${r.toFixed(1)}px;--s:${size.toFixed(1)}px;--t:${period.toFixed(2)}s;--o:${(-phase * period).toFixed(2)}s;--angle:${(phase * 360).toFixed(1)}deg;--a:${s.accent};--n:${i}"><i class="lo-ring"></i><i class="lo-path"><i class="lo-spin"><b class="lo-planet"></b></i></i></span>`;
+        })
+        .join(""),
+    );
+  }
+  const state: LoaderState = { target: 0, shown: 0, last: 0, pct: "", orbits: [...el.querySelectorAll<HTMLElement>(".lo-orbit")] };
+  loaders.set(el, state);
+  requestAnimationFrame(() => el.classList.add("is-built"));
+
+  const pct = el.querySelector<HTMLElement>(".loader-pct");
+  const tick = (now: number) => {
+    const dt = state.last ? Math.min((now - state.last) / 1000, 0.1) : 0.016;
+    state.last = now;
+    state.shown += (state.target - state.shown) * (1 - Math.exp(-dt * 4.5));
+    if (state.target - state.shown < 0.003) state.shown = state.target;
+    const text = `${Math.round(state.shown * 100)} %`;
+    if (pct && text !== state.pct) pct.textContent = state.pct = text;
+    // (planet n of 8 lights up at n/9 of the way)
+    const lit = Math.floor(state.shown * (state.orbits.length + 1) + 1e-6);
+    state.orbits.forEach((o, i) => o.classList.toggle("is-on", i < lit));
+    if (el.isConnected && !el.classList.contains("is-done")) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
 }
 
 export function setLoaderProgress(el: HTMLElement, p: number, label: string) {
-  el.querySelector<HTMLElement>(".loader-bar span")!.style.transform = `scaleX(${p})`;
-  el.querySelector(".loader-status")!.textContent = label;
+  const state = loaders.get(el);
+  const target = Math.max(state?.target ?? 0, Math.min(1, p));
+  if (state) state.target = target;
+  const fill = el.querySelector<HTMLElement>(".lb-fill");
+  const creep = el.querySelector<HTMLElement>(".lb-creep");
+  if (fill) fill.style.transform = `scaleX(${target})`;
+  // While a step runs, a paler bar inches on toward the next one: a long CSS transition, so it keeps moving while
+  // the page is busy building the scene.
+  if (creep) creep.style.transform = `scaleX(${target >= 1 ? 1 : Math.min(0.97, target + 0.16)})`;
+  const status = el.querySelector(".loader-status");
+  if (status) status.textContent = label;
+  el.classList.toggle("is-ready", target >= 1);
+}
+
+/** The start went wrong: the loading screen says so and offers to reload (index.html handles the button). */
+export function setLoaderFailed(el: HTMLElement | null) {
+  if (!el || !document.documentElement.classList.contains("is-loading")) return;
+  document.documentElement.classList.add("load-failed");
+  el.removeAttribute("aria-hidden");
+  const status = el.querySelector(".loader-status");
+  if (status) status.textContent = "Start fehlgeschlagen";
+}
+
+// ---------- 404 inside the page: an address "#/…" that leads nowhere ----------
+
+export function renderLost(el: HTMLElement, address: string) {
+  el.innerHTML = `
+    <div class="lost-inner">
+      <button class="icon-btn lost-close" type="button"><span class="ib-icon">${ICON.close}</span><span class="ib-label">Schließen</span></button>
+      <div class="lost-code" aria-hidden="true">
+        <span class="lc-digit">4</span>
+        <span class="lc-zero"><span class="lc-ring"></span><span class="lc-ghost"></span><span class="lc-path"><span class="lc-spin"><span class="lc-moon"></span></span></span></span>
+        <span class="lc-digit">4</span>
+      </div>
+      <p class="kicker" data-r><span class="kdot"></span>Fehler 404 · Signal verloren</p>
+      <h2 class="lost-title" id="lost-title" tabindex="-1">${chars("Hier ist nur leerer Raum.")}</h2>
+      <p class="lost-text" data-r>Unter <code>${esc(address)}</code> gibt es keinen Planeten – vielleicht ein Tippfehler oder ein veralteter Link.</p>
+      <div class="lost-actions" data-r>
+        <a class="btn btn-primary" href="#/"><span>Zurück zur Sonne</span>${ICON.arrowRight}</a>
+        <a class="btn" href="#/spiel"><span>Minispiel spielen</span></a>
+      </div>
+      <nav class="lost-dest" aria-labelledby="lost-dest-title" data-r>
+        <p class="lost-dest-title" id="lost-dest-title">Oder Kurs setzen auf</p>
+        <ul>${sections
+          .map(
+            (s) => `<li><a href="#/${s.slug}" style="--accent:${s.accent}">
+              <span class="ld-orb" aria-hidden="true" data-thumb="${s.number - 1}" style="background:${s.fallback}"></span>
+              <span class="ld-num">${pad2(s.number)}</span>${esc(s.name)}</a></li>`,
+          )
+          .join("")}</ul>
+      </nav>
+    </div>`;
+  if (thumbs.length) setThumbnails(thumbs, el);
 }

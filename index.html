@@ -11,6 +11,47 @@
     <meta property="og:description" content="%SITE_DESCRIPTION%" />
     <meta property="og:type" content="website" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <style>
+      /* First paint, before the stylesheet is there (while developing it comes with the scripts): dark, no loose text. */
+      html {
+        background: #020309;
+      }
+      .loader {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        background: #020309;
+        color: transparent;
+      }
+    </style>
+    <noscript><style>.loader { display: none !important; }</style></noscript>
+    <script>
+      // While the solar system loads: a note when it takes long, and a way out when a script does not arrive.
+      (function () {
+        var root = document.documentElement;
+        var loading = function () {
+          return root.classList.contains("is-loading");
+        };
+        window.addEventListener(
+          "error",
+          function (e) {
+            var t = e.target;
+            if (!t || t.tagName !== "SCRIPT" || !loading()) return;
+            root.classList.add("load-failed");
+            var loader = document.getElementById("loader");
+            if (loader) loader.removeAttribute("aria-hidden");
+          },
+          true,
+        );
+        window.setTimeout(function () {
+          if (loading()) root.classList.add("is-slow");
+        }, 12000);
+        document.addEventListener("click", function (e) {
+          var t = e.target;
+          if (t && t.closest && t.closest(".loader-retry")) location.reload();
+        });
+      })();
+    </script>
   </head>
   <body>
     <a class="skip-link" href="#/ueber-mich">Zum Inhalt springen</a>
@@ -25,7 +66,8 @@
 
     <header id="topbar" class="topbar"></header>
 
-    <!-- The journey: the start, then a stretch of travel and a stop per planet (rendered by the app). -->
+    <!-- The journey: the start, then a stretch of travel and a stop per planet (rendered by the app).
+         (404.html recognises the start page by the id "journey".) -->
     <main id="journey" class="journey">
       <section id="hero" class="hero stop" data-stop="0" aria-labelledby="hero-title"></section>
     </main>
@@ -37,9 +79,29 @@
 
     <div id="menu" class="menu" role="dialog" aria-modal="true" aria-label="Navigation" data-lenis-prevent hidden></div>
 
+    <!-- An address inside the page ("#/…") that leads nowhere. -->
+    <div id="lost" class="lost" role="dialog" aria-modal="true" aria-labelledby="lost-title" data-lenis-prevent hidden></div>
+
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-    <div id="loader" class="loader" aria-hidden="true"></div>
+    <!-- The loading screen is here from the first paint, before the scripts arrive; the app adds the planets. -->
+    <div id="loader" class="loader" aria-hidden="true">
+      <div class="loader-sky"><i></i><i></i><i></i></div>
+      <div class="loader-warp"></div>
+      <div class="loader-center">
+        <div class="loader-system"><span class="lo-sun"></span></div>
+        <p class="loader-name">%LOADER_NAME%</p>
+        <div class="loader-meter">
+          <div class="loader-bar"><span class="lb-creep"></span><span class="lb-fill"></span></div>
+          <p class="loader-meta"><span class="loader-status">Daten werden empfangen</span><span class="loader-pct">0&thinsp;%</span></p>
+        </div>
+      </div>
+      <p class="loader-note loader-slow">Das dauert gerade länger als gewohnt …</p>
+      <p class="loader-note loader-fail" role="alert">
+        Das Sonnensystem konnte nicht geladen werden.
+        <button class="loader-retry" type="button">Neu laden</button>
+      </p>
+    </div>
 
     <noscript>
       <p class="noscript">Diese Seite braucht JavaScript, um das Sonnensystem darzustellen.</p>
