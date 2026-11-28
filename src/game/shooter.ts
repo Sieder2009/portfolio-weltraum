@@ -1,6 +1,6 @@
 // Sternenschwarm: a small vertical space shooter, opened by clicking a ship in the background battle.
-// Alien swarms fly in, line up in formation, dive at the player and shoot; every fifth wave the swarm queen comes
-// down herself. The field, the ships and the effects are drawn into a canvas (every sprite is painted once, in
+// You fly a patrol fighter; squadrons of raiders fly in, line up in formation, dive at you and shoot; every fifth
+// wave their flagship comes down itself. The ships and colours are those of the battle behind the site. The field, the ships and the effects are drawn into a canvas (every sprite is painted once, in
 // code); scores, banners and menus are HTML on top of it, in the look of the rest of the site.
 
 export type SfxKind = "shot" | "hit" | "boom" | "bigboom" | "power" | "hurt" | "wave";
@@ -38,19 +38,47 @@ const SHIELD_TIME = 8;
 const SIDE_ROOM = 250;
 
 type State = "title" | "play" | "pause" | "over";
+/** the raiders: drone = fighter, crab = interceptor, beetle = bomber, queen = the flagship */
 type Kind = "drone" | "crab" | "beetle" | "queen";
 type PowerKind = "weapon" | "shield" | "life";
-type Glow = "cyan" | "orange" | "pink" | "white" | "violet" | "teal" | "yellow";
+type Glow = "red" | "amber" | "fire" | "ice" | "white" | "yellow";
 
-const KIND_COLOR: Record<Kind | "player", string> = {
-  drone: "#5fffd2",
-  crab: "#ff8a4c",
-  beetle: "#b57bff",
-  queen: "#ff7ddc",
-  player: "#62f0ff",
+/** the screen in amber, like a targeting computer */
+const HUD = "#ffb347";
+/** the fireball of an explosion, and the colour of the hull fragments flying off */
+const BLAST = "#ffb066";
+const DEBRIS: Record<Kind | "player", string> = { drone: "#8f959f", crab: "#8f959f", beetle: "#6c727c", queen: "#8f959f", player: "#d9d3c5" };
+const POWER_COLOR: Record<PowerKind, string> = { weapon: HUD, shield: "#8ec9ff", life: "#ff5a4a" };
+/** where fires break out on the flagship when it is badly hit (from its centre) */
+const FIRES: [number, number][] = [
+  [-22, -38],
+  [18, -8],
+  [-58, 32],
+  [28, -60],
+  [62, 28],
+];
+/** where the engines glow at the back of each raider (x, y, size; the sprites face down) */
+const ENGINE_SPOTS: Record<Kind, [number, number, number][]> = {
+  drone: [[0, -21, 0.5]],
+  crab: [
+    [-3, -17, 0.38],
+    [3, -17, 0.38],
+  ],
+  beetle: [
+    [-11, -30, 0.5],
+    [11, -30, 0.5],
+    [0, -8.5, 0.3],
+  ],
+  queen: [
+    [-22, -79, 0.6],
+    [-11, -79, 0.6],
+    [0, -79, 0.6],
+    [11, -79, 0.6],
+    [22, -79, 0.6],
+    [-45, -78, 0.85],
+    [45, -78, 0.85],
+  ],
 };
-const KIND_GLOW: Record<Kind, Glow> = { drone: "teal", crab: "orange", beetle: "violet", queen: "pink" };
-const POWER_COLOR: Record<PowerKind, string> = { weapon: "#ffb85c", shield: "#62f0ff", life: "#ff7ddc" };
 const STAR_TINTS = ["#ffffff", "#d6e4ff", "#ffe8cc", "#e0d2ff", "#c8f7ff"];
 const ENEMY: Record<Exclude<Kind, "queen">, { hp: number; r: number; value: number }> = {
   drone: { hp: 1, r: 15, value: 100 },
@@ -109,9 +137,8 @@ interface Bullet {
   vy: number;
   r: number;
   dmg: number;
+  /** (drawn turned along its flight) */
   sprite: Sprite;
-  /** drawn turned along its flight (bolts, needles) */
-  turn: boolean;
   dead: boolean;
 }
 
@@ -241,6 +268,9 @@ function rrect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h
 }
 
 // ---------- sprites (painted once; enemies face down, the player up) ----------
+// The ships look like the battle behind the site: you fly a patrol fighter (light hull, faded red bands, warm engines,
+// red bolts), the enemies are raiders (grey hulls, pale markings, green visors, cold engines, green bolts). The hulls
+// are matte paint with plates in other shades, grime and soot toward the engines.
 
 function makeSprite(w: number, h: number, res: number, draw: (ctx: CanvasRenderingContext2D) => void): Sprite {
   const img = document.createElement("canvas");
@@ -281,21 +311,22 @@ function glowDot(res: number, color: string) {
 function smokeSprite(res: number) {
   return makeSprite(32, 32, res, (ctx) => {
     const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 16);
-    g.addColorStop(0, "rgba(86,76,120,0.55)");
-    g.addColorStop(0.6, "rgba(52,46,84,0.25)");
-    g.addColorStop(1, "rgba(30,26,50,0)");
+    g.addColorStop(0, "rgba(92,86,80,0.55)");
+    g.addColorStop(0.6, "rgba(58,54,50,0.25)");
+    g.addColorStop(1, "rgba(34,32,30,0)");
     ctx.fillStyle = g;
     ctx.fillRect(-16, -16, 32, 32);
   });
 }
 
+/** the flame of a warm engine, pointing down */
 function drawFlame(ctx: CanvasRenderingContext2D) {
   const g = ctx.createLinearGradient(0, -20, 0, 22);
   g.addColorStop(0, "rgba(255,255,255,1)");
-  g.addColorStop(0.22, "rgba(150,248,255,0.95)");
-  g.addColorStop(0.6, "rgba(70,150,255,0.45)");
-  g.addColorStop(1, "rgba(70,90,255,0)");
-  ctx.shadowColor = "#4fd8ff";
+  g.addColorStop(0.2, "rgba(255,214,160,0.95)");
+  g.addColorStop(0.55, "rgba(255,120,60,0.5)");
+  g.addColorStop(1, "rgba(255,70,40,0)");
+  ctx.shadowColor = "#ff7a3a";
   ctx.shadowBlur = 8;
   ctx.fillStyle = g;
   ctx.beginPath();
@@ -308,7 +339,7 @@ function drawFlame(ctx: CanvasRenderingContext2D) {
 
 type Tone = { dark: string; mid: string; light: string; tint?: string };
 
-/** A polished metal finish: dark edges, a bright band toward the light, a darker reflection band, a tinted bounce. */
+/** Polished metal (barrels, turrets): dark edges, a bright band toward the light, a darker reflection band. */
 function metal(ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number, t: Tone) {
   const g = ctx.createLinearGradient(x0, y0, x1, y1);
   g.addColorStop(0, t.dark);
@@ -323,492 +354,459 @@ function metal(ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: number
   return g;
 }
 
-const STEEL: Tone = { dark: "#1c222b", mid: "#6c778a", light: "#cfd6e2", tint: "#4a5870" };
-const GUNMETAL: Tone = { dark: "#0e1118", mid: "#3a4252", light: "#9aa4b5" };
-const COPPER: Tone = { dark: "#2a0d05", mid: "#94401f", light: "#ffc79a", tint: "#6a2812" };
-const VIOLET: Tone = { dark: "#150630", mid: "#663aac", light: "#e4ceff", tint: "#2f6aa6" };
-const TEAL: Tone = { dark: "#05202a", mid: "#26888a", light: "#c4fff3", tint: "#174f66" };
-const ROYAL: Tone = { dark: "#12051a", mid: "#58286e", light: "#f2caff", tint: "#2c184f" };
-
-/** Darker toward the outline, lighter toward the light (top left): gives flat shapes their curvature. */
-function curvature(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number) {
-  const g = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.45, r * 0.08, cx, cy, r);
-  g.addColorStop(0, "rgba(255,255,255,0.28)");
-  g.addColorStop(0.45, "rgba(255,255,255,0)");
-  g.addColorStop(1, "rgba(0,0,8,0.62)");
+/** Matte paint across a hull part: darker toward its edges, lightest a little toward the light, no shine. */
+function paint(ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number, t: Tone) {
+  const g = ctx.createLinearGradient(x0, y0, x1, y1);
+  g.addColorStop(0, t.dark);
+  g.addColorStop(0.26, t.mid);
+  g.addColorStop(0.44, t.light);
+  g.addColorStop(0.64, t.mid);
+  g.addColorStop(0.88, t.tint ?? t.mid);
+  g.addColorStop(1, t.dark);
   return g;
 }
 
-function drawPlayer(ctx: CanvasRenderingContext2D) {
-  const hull = () => {
-    ctx.beginPath();
-    ctx.moveTo(0, -31);
-    ctx.lineTo(5, -17);
-    ctx.lineTo(9, -5);
-    ctx.lineTo(27, 9);
-    ctx.lineTo(28, 17);
-    ctx.lineTo(11, 14);
-    ctx.lineTo(8, 24);
-    ctx.lineTo(-8, 24);
-    ctx.lineTo(-11, 14);
-    ctx.lineTo(-28, 17);
-    ctx.lineTo(-27, 9);
-    ctx.lineTo(-9, -5);
-    ctx.lineTo(-5, -17);
-    ctx.closePath();
+/** the patrol's light hull, the raiders' grey one and a darker grey for their engines and pods */
+const PATROL: Tone = { dark: "#55504a", mid: "#b2ac9f", light: "#e7e1d3", tint: "#8a8478" };
+const RAIDER: Tone = { dark: "#2a2e35", mid: "#747b85", light: "#c4cad2", tint: "#555c66" };
+const RAIDER_DARK: Tone = { dark: "#16181d", mid: "#4a5059", light: "#959ca6", tint: "#3a4048" };
+const GUNMETAL: Tone = { dark: "#0e1118", mid: "#3a4252", light: "#9aa4b5" };
+/** faded markings: red bands on the patrol, pale ones on the raiders */
+const RED_BAND = "#a8392a";
+const PALE_BAND = "#cfccc2";
+const OUTLINE = "rgba(10,9,8,0.92)";
+const SEAM = "rgba(18,15,12,0.5)";
+
+/** a closed path through points given for the right half (x ≥ 0, in order), mirrored for the left half */
+function sym(ctx: CanvasRenderingContext2D, half: [number, number][]) {
+  ctx.beginPath();
+  half.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+  for (let i = half.length - 1; i >= 0; i--) ctx.lineTo(-half[i][0], half[i][1]);
+  ctx.closePath();
+}
+
+function poly(ctx: CanvasRenderingContext2D, pts: [number, number][]) {
+  ctx.beginPath();
+  pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+  ctx.closePath();
+}
+
+/** Straight lines from [x0, y0, x1, y1] lists. */
+function lines(ctx: CanvasRenderingContext2D, segs: number[][], color: string, width: number) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.beginPath();
+  for (const [x0, y0, x1, y1] of segs) {
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+  }
+  ctx.stroke();
+}
+
+/**
+ * Wear inside the current clip (box: x0, y0, x1, y1): plates in other shades, grime, and soot growing from
+ * `clean` toward `soot` (y: toward the engines).
+ */
+function weather(ctx: CanvasRenderingContext2D, box: number[], clean: number, soot: number, seed: number) {
+  const [x0, y0, x1, y1] = box;
+  let s = seed * 7919 + 13;
+  const r = () => {
+    s = (s * 16807) % 2147483647;
+    return (s - 1) / 2147483646;
   };
-  // brushed steel across the wings
-  hull();
-  ctx.fillStyle = metal(ctx, -28, -8, 28, 8, STEEL);
+  const area = (x1 - x0) * (y1 - y0);
+  for (let i = 0; i < Math.max(3, area / 70); i++) {
+    const w = 2.5 + r() * 7;
+    const h = 2.5 + r() * 8;
+    ctx.fillStyle = r() < 0.5 ? `rgba(255,250,238,${(0.05 + r() * 0.08).toFixed(3)})` : `rgba(22,18,14,${(0.06 + r() * 0.1).toFixed(3)})`;
+    ctx.fillRect(x0 + r() * (x1 - x0 - w), y0 + r() * (y1 - y0 - h), w, h);
+  }
+  for (let i = 0; i < area / 14; i++) {
+    ctx.fillStyle = `rgba(28,22,16,${(0.1 + r() * 0.2).toFixed(3)})`;
+    ctx.fillRect(x0 + r() * (x1 - x0), y0 + r() * (y1 - y0), 0.5 + r() * 1.3, 0.5 + r() * 1.3);
+  }
+  const g = ctx.createLinearGradient(0, clean, 0, soot);
+  g.addColorStop(0, "rgba(14,11,8,0)");
+  g.addColorStop(1, "rgba(14,11,8,0.6)");
+  ctx.fillStyle = g;
+  ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+}
+
+/** A part of a hull: the path from `shape`, filled with `fill`, worn (see weather) and outlined. */
+function part(
+  ctx: CanvasRenderingContext2D,
+  shape: () => void,
+  fill: string | CanvasGradient,
+  wear?: { box: number[]; clean: number; soot: number; seed: number },
+) {
+  shape();
+  ctx.fillStyle = fill;
   ctx.fill();
+  if (wear) {
+    ctx.save();
+    shape();
+    ctx.clip();
+    weather(ctx, wear.box, wear.clean, wear.soot, wear.seed);
+    ctx.restore();
+  }
+  shape();
+  ctx.strokeStyle = OUTLINE;
+  ctx.lineWidth = 0.9;
+  ctx.stroke();
+}
+
+/** Fills the current clip's box with a band (markings painted over a part). */
+function band(ctx: CanvasRenderingContext2D, shape: () => void, color: string, x: number, y: number, w: number, h: number) {
   ctx.save();
-  hull();
+  shape();
   ctx.clip();
-  // reflections along the length: bright at the nose, a dark band across the middle, dark toward the tail
-  const along = ctx.createLinearGradient(0, -31, 0, 24);
-  along.addColorStop(0, "rgba(255,255,255,0.32)");
-  along.addColorStop(0.28, "rgba(255,255,255,0)");
-  along.addColorStop(0.46, "rgba(0,0,12,0.38)");
-  along.addColorStop(0.62, "rgba(255,255,255,0.1)");
-  along.addColorStop(1, "rgba(0,0,12,0.6)");
-  ctx.fillStyle = along;
-  ctx.fillRect(-30, -32, 60, 58);
-  // the brushed grain
-  ctx.strokeStyle = "rgba(255,255,255,0.05)";
-  ctx.lineWidth = 0.5;
-  for (let y = -30; y < 25; y += 1.5) {
-    ctx.beginPath();
-    ctx.moveTo(-30, y);
-    ctx.lineTo(30, y + 1.2);
-    ctx.stroke();
-  }
+  ctx.fillStyle = color;
+  ctx.globalAlpha = 0.9;
+  ctx.fillRect(x, y, w, h);
   ctx.restore();
-  // edges: dark outline, a sharp light rim along the leading edges
-  hull();
-  ctx.strokeStyle = "rgba(8,10,18,0.95)";
-  ctx.lineWidth = 1.1;
-  ctx.stroke();
-  ctx.strokeStyle = "rgba(255,255,255,0.85)";
-  ctx.lineWidth = 0.7;
-  ctx.beginPath();
-  for (const s of [-1, 1]) {
-    ctx.moveTo(0, -31);
-    ctx.lineTo(s * 5, -17);
-    ctx.lineTo(s * 9, -5);
-    ctx.lineTo(s * 27, 9);
-  }
-  ctx.stroke();
-  // panel lines and rivets
-  ctx.strokeStyle = "rgba(12,16,28,0.7)";
+}
+
+/** dark glass: a canopy with a faint reflection along its top */
+function glass(ctx: CanvasRenderingContext2D, shape: () => void, x0: number, y0: number, x1: number, y1: number) {
+  const g = ctx.createLinearGradient(x0, y0, x1, y1);
+  g.addColorStop(0, "#40525e");
+  g.addColorStop(0.35, "#0d1820");
+  g.addColorStop(1, "#03070b");
+  shape();
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.strokeStyle = "rgba(10,9,8,0.95)";
   ctx.lineWidth = 0.8;
-  ctx.beginPath();
-  for (const s of [-1, 1]) {
-    ctx.moveTo(s * 9, -5);
-    ctx.lineTo(s * 11, 14);
-    ctx.moveTo(s * 16, 4);
-    ctx.lineTo(s * 17, 15);
-    ctx.moveTo(s * 4, -11);
-    ctx.lineTo(s * 20, 4);
-  }
-  ctx.moveTo(0, -17);
-  ctx.lineTo(0, 22);
   ctx.stroke();
-  ctx.fillStyle = "rgba(230,236,246,0.75)";
-  for (const [x, y] of [
-    [-13, 6],
-    [13, 6],
-    [-20, 11],
-    [20, 11],
-    [-6, 12],
-    [6, 12],
-    [-3, -6],
-    [3, -6],
-  ]) {
-    ctx.beginPath();
-    ctx.arc(x, y, 0.55, 0, TAU);
-    ctx.fill();
-  }
-  // anodised blue accents on the wings
-  ctx.lineCap = "round";
-  for (const s of [-1, 1]) {
-    const a = ctx.createLinearGradient(s * 11, 2, s * 22, 10);
-    a.addColorStop(0, "#1b4870");
-    a.addColorStop(0.5, "#9ad8ff");
-    a.addColorStop(1, "#1f5079");
-    ctx.strokeStyle = a;
-    ctx.lineWidth = 1.9;
-    ctx.beginPath();
-    ctx.moveTo(s * 11, 2);
-    ctx.lineTo(s * 22, 10);
-    ctx.stroke();
-  }
-  // wing tips in darker metal, with navigation lights
-  for (const s of [-1, 1]) {
-    ctx.fillStyle = metal(ctx, s * 25 - 2, 0, s * 25 + 2, 0, GUNMETAL);
-    ctx.fillRect(s > 0 ? 25.5 : -28.5, 6, 3, 12);
-  }
+}
+
+/** a small light that glows (visors, gun ports) */
+function lamp(ctx: CanvasRenderingContext2D, color: string, draw: () => void, blur = 6) {
   ctx.save();
-  ctx.shadowBlur = 6;
-  for (const [x, color] of [
-    [-27, "#ff6f91"],
-    [27, "#7dffb0"],
-  ] as const) {
-    ctx.fillStyle = color;
-    ctx.shadowColor = color;
-    ctx.beginPath();
-    ctx.arc(x, 12.5, 1.3, 0, TAU);
-    ctx.fill();
-  }
+  ctx.shadowColor = color;
+  ctx.shadowBlur = blur;
+  ctx.fillStyle = color;
+  draw();
   ctx.restore();
-  // engines: dark metal housings with hot rims
-  for (const x of [-6.5, 6.5]) {
-    ctx.fillStyle = metal(ctx, x - 3.5, 0, x + 3.5, 0, GUNMETAL);
-    rrect(ctx, x - 3.5, 15, 7, 10, 2);
+}
+
+/** a gun barrel pointing along y, from y0 to y1, with a dark muzzle at y1 */
+function barrel(ctx: CanvasRenderingContext2D, x: number, y0: number, y1: number, w = 2.2) {
+  ctx.fillStyle = metal(ctx, x - w / 2, 0, x + w / 2, 0, GUNMETAL);
+  ctx.fillRect(x - w / 2, Math.min(y0, y1), w, Math.abs(y1 - y0));
+  ctx.fillStyle = "#121318";
+  ctx.fillRect(x - w * 0.75, y1 - (y1 < y0 ? 0 : 3), w * 1.5, 3);
+}
+
+/**
+ * The player: a patrol fighter seen from above, nose up. A long body with the cockpit in the middle, straight wings
+ * with an engine nacelle at each tip, two cannons forward of the wings; faded red bands, warm engines.
+ */
+function drawPlayer(ctx: CanvasRenderingContext2D) {
+  ctx.lineJoin = "round";
+  for (const s of [-1, 1]) barrel(ctx, s * 13, -1, -26);
+  // the wings
+  for (const s of [-1, 1]) {
+    const wing = () => poly(ctx, [[s * 4, -1], [s * 17, 3], [s * 17, 12], [s * 4, 11]]);
+    part(ctx, wing, paint(ctx, 0, -1, 0, 12, PATROL), { box: [-18, -2, 18, 13], clean: 2, soot: 16, seed: 3 + s });
+    band(ctx, wing, RED_BAND, s > 0 ? 12.5 : -15.5, -2, 3, 16);
+    lines(ctx, [[s * 8, 0.3, s * 8, 11.2], [s * 4, 6, s * 12.5, 7]], SEAM, 0.6);
+  }
+  // the nacelles: a dark intake in front, a red band, the nozzle behind
+  for (const s of [-1, 1]) {
+    const x = s * 20;
+    const nacelle = () => {
+      rrect(ctx, x - 4.6, -13, 9.2, 35, 3.2);
+    };
+    part(ctx, nacelle, paint(ctx, x - 4.6, 0, x + 4.6, 0, PATROL), { box: [x - 5, -14, x + 5, 23], clean: 2, soot: 22, seed: 8 + s });
+    band(ctx, nacelle, RED_BAND, x - 5, -3.5, 10, 4);
+    lines(ctx, [[x - 4.6, -8, x + 4.6, -8], [x - 4.6, 6, x + 4.6, 6], [x - 4.6, 13, x + 4.6, 13]], SEAM, 0.6);
+    ctx.fillStyle = "#101114";
+    ctx.beginPath();
+    ctx.ellipse(x, -12.2, 3.3, 1.4, 0, 0, TAU);
     ctx.fill();
-    ctx.strokeStyle = "rgba(255,170,90,0.9)";
+    ctx.fillStyle = "#1a1b1f";
+    ctx.fillRect(x - 3.6, 19.5, 7.2, 3.2);
+    ctx.strokeStyle = "rgba(255,150,90,0.95)";
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.ellipse(x, 24.5, 2.6, 0.9, 0, 0, TAU);
+    ctx.ellipse(x, 22.5, 3, 0.9, 0, 0, TAU);
     ctx.stroke();
   }
-  // cockpit: smoked glass with a sharp reflection
-  const glass = ctx.createLinearGradient(-4, -19, 4, 1);
-  glass.addColorStop(0, "#4a8fb0");
-  glass.addColorStop(0.45, "#0c2234");
-  glass.addColorStop(1, "#040d17");
-  ctx.fillStyle = glass;
+  // the body: red band on the nose and behind the cockpit
+  const body = () => sym(ctx, [[0, -31], [2.4, -24], [4.8, -10], [6, 6], [6, 22], [3.5, 25]]);
+  part(ctx, body, paint(ctx, -6, 0, 6, 0, PATROL), { box: [-7, -32, 7, 26], clean: 4, soot: 26, seed: 11 });
+  band(ctx, body, RED_BAND, -7, -21.5, 14, 3.2);
+  band(ctx, body, RED_BAND, -7, 3, 14, 2.6);
+  ctx.fillStyle = "#17181c";
+  ctx.fillRect(-0.6, -34, 1.2, 4);
+  // the rear deck: a darker plate, a vent, a small sensor dish
+  ctx.fillStyle = "rgba(20,16,12,0.16)";
+  ctx.fillRect(-4.2, 8.5, 8.4, 13.5);
+  ctx.fillStyle = "#24252a";
+  ctx.fillRect(-2.6, 16, 5.2, 3);
+  lines(ctx, [[-2.6, 17, 2.6, 17], [-2.6, 18, 2.6, 18]], "rgba(120,114,104,0.6)", 0.4);
+  ctx.fillStyle = paint(ctx, 1, 0, 5, 0, PATROL);
   ctx.beginPath();
-  ctx.moveTo(0, -19);
-  ctx.quadraticCurveTo(4.6, -10, 3.6, -1);
-  ctx.quadraticCurveTo(0, 2, -3.6, -1);
-  ctx.quadraticCurveTo(-4.6, -10, 0, -19);
+  ctx.arc(2.6, 11.5, 1.8, 0, TAU);
   ctx.fill();
-  ctx.strokeStyle = "rgba(200,222,242,0.6)";
-  ctx.lineWidth = 0.6;
+  ctx.strokeStyle = OUTLINE;
+  ctx.lineWidth = 0.5;
   ctx.stroke();
-  ctx.fillStyle = "rgba(255,255,255,0.9)";
+  lines(ctx, [[0, -17, 0, -15], [-4.6, -12, 4.6, -12], [-5.6, 8.5, 5.6, 8.5]], SEAM, 0.6);
+  // the cockpit: dark glass in a frame
+  const canopy = () => {
+    ctx.beginPath();
+    ctx.moveTo(0, -17);
+    ctx.quadraticCurveTo(3.6, -10, 3.1, -1.5);
+    ctx.quadraticCurveTo(0, 0.6, -3.1, -1.5);
+    ctx.quadraticCurveTo(-3.6, -10, 0, -17);
+  };
+  glass(ctx, canopy, -3, -17, 3, 0);
+  lines(ctx, [[0, -16.5, 0, -0.5], [-3.2, -7, 3.2, -7]], "rgba(190,182,166,0.85)", 0.7);
+  ctx.fillStyle = "rgba(255,255,255,0.55)";
   ctx.beginPath();
-  ctx.ellipse(-1.4, -12, 0.8, 3.6, 0.2, 0, TAU);
+  ctx.ellipse(-1.4, -11.5, 0.6, 2.6, 0.2, 0, TAU);
   ctx.fill();
 }
 
-/** The drone: a dome of polished teal metal on jointed cables, two frames (the cables sway, the core pulses). */
-function drawDrone(ctx: CanvasRenderingContext2D, f: number) {
-  ctx.lineCap = "round";
-  for (let i = 0; i < 5; i++) {
-    const x = -10 + i * 5;
-    const sway = (i % 2 ? 1 : -1) * (f ? 3.5 : -3.5);
-    const g = ctx.createLinearGradient(x - 3, 0, x + 3, 0);
-    g.addColorStop(0, "#0a2c33");
-    g.addColorStop(0.5, "#9fece0");
-    g.addColorStop(1, "#0a2c33");
-    ctx.strokeStyle = g;
-    ctx.lineWidth = 2.2;
+/**
+ * The fighter (a raider dart seen from above, nose down): wings swept back with a cannon at each tip, a ridge of a
+ * fin along its back, a dark canopy with a green visor, one cold engine.
+ */
+function drawDrone(ctx: CanvasRenderingContext2D) {
+  ctx.lineJoin = "round";
+  for (const s of [-1, 1]) barrel(ctx, s * 16.6, -9, 6, 2);
+  for (const s of [-1, 1]) {
+    const wing = () => poly(ctx, [[s * 4, 4], [s * 17.8, -9.5], [s * 17.8, -15], [s * 5, -9]]);
+    part(ctx, wing, paint(ctx, 0, 4, 0, -15, RAIDER), { box: [-18, -16, 18, 5], clean: 2, soot: -14, seed: 21 + s });
+    band(ctx, wing, PALE_BAND, s > 0 ? 13 : -15.5, -16, 2.5, 20);
+    ctx.fillStyle = "rgba(14,14,18,0.75)";
+    ctx.fillRect(s > 0 ? 7 : -10, -7.5, 3, 4);
+  }
+  const body = () => sym(ctx, [[0, 21], [3.4, 10], [6.4, -6], [6, -15], [3.5, -18.5]]);
+  part(ctx, body, paint(ctx, -6.4, 0, 6.4, 0, RAIDER), { box: [-7, -19, 7, 22], clean: 6, soot: -19, seed: 25 });
+  // the fin, seen from above: a thin ridge along the back
+  ctx.fillStyle = paint(ctx, -1.3, 0, 1.3, 0, RAIDER_DARK);
+  ctx.fillRect(-1.3, -18, 2.6, 15);
+  lines(ctx, [[-0.4, -17.5, -0.4, -3.5]], "rgba(220,226,234,0.45)", 0.5);
+  lines(ctx, [[-5, -2, 5, -2], [-3.6, 9, 3.6, 9]], SEAM, 0.6);
+  const canopy = () => poly(ctx, [[0, 14], [2.8, 7.5], [0, 0.5], [-2.8, 7.5]]);
+  glass(ctx, canopy, -2, 1, 2, 14);
+  lines(ctx, [[0, 0.8, 0, 13.6]], "rgba(150,158,170,0.55)", 0.5);
+  lamp(ctx, "#7dff9a", () => ctx.fillRect(-2.2, 11.2, 4.4, 1.2));
+  ctx.fillStyle = "#15171b";
+  ctx.fillRect(-3.6, -20.5, 7.2, 3);
+  ctx.strokeStyle = "rgba(150,205,255,0.95)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.ellipse(0, -20.5, 3, 0.9, 0, 0, TAU);
+  ctx.stroke();
+}
+
+/**
+ * The interceptor (seen from above, nose down): a pod with a dark canopy between two sickle blades that curve
+ * forward, a cannon at each blade tip, a pale band across each blade, two cold engines.
+ */
+function drawCrab(ctx: CanvasRenderingContext2D) {
+  ctx.lineJoin = "round";
+  for (const s of [-1, 1]) {
+    ctx.fillStyle = "#25282e";
+    ctx.fillRect(s > 0 ? 6 : -13, -6, 7, 5);
+    barrel(ctx, s * 18, 17, 27, 2);
+  }
+  for (const s of [-1, 1]) {
+    const blade = () => {
+      ctx.beginPath();
+      ctx.moveTo(s * 11, -10);
+      ctx.quadraticCurveTo(s * 26, -11, s * 25, 4);
+      ctx.quadraticCurveTo(s * 24, 15, s * 19.5, 22);
+      ctx.lineTo(s * 16.5, 20);
+      ctx.quadraticCurveTo(s * 18.5, 9, s * 15.5, 0);
+      ctx.quadraticCurveTo(s * 13.5, -3.5, s * 10, -2.5);
+      ctx.closePath();
+    };
+    part(ctx, blade, paint(ctx, s * 10, 0, s * 26, 0, RAIDER), { box: [s > 0 ? 9 : -27, -12, s > 0 ? 27 : -9, 23], clean: 10, soot: -12, seed: 31 + s });
+    band(ctx, blade, PALE_BAND, s > 0 ? 9 : -27, 3, 18, 3.4);
+    lines(ctx, [[s * 14, -8, s * 22, -6], [s * 17, 10, s * 23, 11]], SEAM, 0.6);
+    ctx.fillStyle = "rgba(14,14,18,0.8)";
+    ctx.fillRect(s > 0 ? 19 : -22, -5, 3, 5);
+  }
+  const pod = () => sym(ctx, [[0, 15], [5.2, 11.5], [8.2, 1], [7.2, -10], [4.2, -15.5]]);
+  part(ctx, pod, paint(ctx, -8.2, 0, 8.2, 0, RAIDER), { box: [-9, -16, 9, 16], clean: 6, soot: -16, seed: 35 });
+  lines(ctx, [[-7.6, -4, 7.6, -4], [0, -15, 0, -8]], SEAM, 0.6);
+  const canopy = () => {
     ctx.beginPath();
-    ctx.moveTo(x, 2);
-    ctx.quadraticCurveTo(x + sway, 10, x - sway * 0.4, 20);
-    ctx.stroke();
-    ctx.fillStyle = "#d8fff8";
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * TAU + Math.PI / 6;
+      ctx.lineTo(Math.cos(a) * 4.6, 4.5 + Math.sin(a) * 4.6);
+    }
+    ctx.closePath();
+  };
+  glass(ctx, canopy, -3, 0, 3, 9);
+  lamp(ctx, "#7dff9a", () => ctx.fillRect(-2.6, 9.6, 5.2, 1.2));
+  for (const s of [-1, 1]) {
+    ctx.fillStyle = "#15171b";
+    ctx.fillRect(s * 3 - 2, -17.5, 4, 2.6);
+  }
+}
+
+/**
+ * The bomber (seen from above, nose down): two long hulls with bomb bays, joined by a broad wing and a cockpit
+ * module in front with a twin gun; heavy plates, three cold engines.
+ */
+function drawBeetle(ctx: CanvasRenderingContext2D) {
+  ctx.lineJoin = "round";
+  for (const s of [-1, 1]) barrel(ctx, s * 2.2, 24, 31, 1.8);
+  // the broad wing, reaching out past the hulls, with pale tips and a cannon under each
+  for (const s of [-1, 1]) barrel(ctx, s * 21, -2, 12, 1.8);
+  const wing = () => poly(ctx, [[-25, -9], [25, -9], [25, -3], [21, 7], [-21, 7], [-25, -3]]);
+  part(ctx, wing, paint(ctx, 0, -9, 0, 7, RAIDER), { box: [-26, -10, 26, 8], clean: 8, soot: -9, seed: 41 });
+  band(ctx, wing, PALE_BAND, -26, -10, 6, 18);
+  band(ctx, wing, PALE_BAND, 20, -10, 6, 18);
+  for (const s of [-1, 1]) {
+    const x = s * 11;
+    const hull = () => {
+      rrect(ctx, x - 5.5, -28, 11, 48, 4.5);
+    };
+    part(ctx, hull, paint(ctx, x - 5.5, 0, x + 5.5, 0, RAIDER_DARK), { box: [x - 6, -29, x + 6, 21], clean: 6, soot: -29, seed: 43 + s });
+    // the bomb bay
+    ctx.fillStyle = "#14161a";
+    ctx.fillRect(x - 3, -15, 6, 18);
+    lines(ctx, [[x, -15, x, 3], [x - 3, -6, x + 3, -6]], "rgba(120,126,136,0.55)", 0.5);
+    lines(ctx, [[x - 5.5, -21, x + 5.5, -21], [x - 5.5, 9, x + 5.5, 9], [x - 5.5, 15, x + 5.5, 15]], SEAM, 0.6);
+    ctx.fillStyle = "#15171b";
+    ctx.fillRect(x - 4, -30, 8, 3);
+  }
+  const module = () => sym(ctx, [[0, 27], [4.5, 23], [6.5, 12], [6, -2], [4, -7]]);
+  part(ctx, module, paint(ctx, -6.5, 0, 6.5, 0, RAIDER), { box: [-7, -8, 7, 28], clean: 20, soot: -8, seed: 47 });
+  lines(ctx, [[-6.4, 4, 6.4, 4], [0, -6, 0, 4]], SEAM, 0.6);
+  const canopy = () => poly(ctx, [[-3.6, 13], [3.6, 13], [2.8, 21], [-2.8, 21]]);
+  glass(ctx, canopy, -3, 13, 3, 21);
+  lamp(ctx, "#7dff9a", () => ctx.fillRect(-2.6, 21.6, 5.2, 1.2));
+  ctx.fillStyle = "#15171b";
+  ctx.fillRect(-2.5, -9.5, 5, 2.6);
+}
+
+/**
+ * The flagship (a raider cruiser seen from above, nose down): a long block hull behind a wide front bar with a gun
+ * pod at each end, decks stepping up to a command tower, trenches with rows of cold windows, engines at the back.
+ * (The big gun turret in the middle is drawn live, it follows the player.)
+ */
+function drawQueen(ctx: CanvasRenderingContext2D) {
+  ctx.lineJoin = "round";
+  const windows = (x: number, y0: number, y1: number, seed: number) => {
+    let s = seed;
+    ctx.fillStyle = "rgba(190,225,255,0.9)";
+    for (let y = y0; y < y1; y += 3.4) {
+      s = (s * 16807) % 2147483647;
+      if (s % 5 === 0) continue;
+      ctx.fillRect(x - 0.6, y, 1.2, 1.6);
+    }
+  };
+  // the side engines, held out on struts
+  for (const s of [-1, 1]) {
+    ctx.fillStyle = "#23262c";
+    ctx.fillRect(s > 0 ? 30 : -38, -56, 8, 10);
+    ctx.fillRect(s > 0 ? 30 : -38, -34, 8, 8);
+    const x = s * 45;
+    const nacelle = () => {
+      rrect(ctx, x - 9.5, -76, 19, 58, 6);
+    };
+    part(ctx, nacelle, paint(ctx, x - 9.5, 0, x + 9.5, 0, RAIDER_DARK), { box: [x - 10, -77, x + 10, -17], clean: -30, soot: -76, seed: 51 + s });
+    lines(ctx, [[x - 9.5, -60, x + 9.5, -60], [x - 9.5, -44, x + 9.5, -44], [x - 9.5, -30, x + 9.5, -30]], SEAM, 0.8);
+    ctx.fillStyle = "#121317";
+    ctx.fillRect(x - 7, -79, 14, 4);
+  }
+  // the hull, with the engine block at the back
+  const hull = () => sym(ctx, [[0, -72], [27, -72], [34, -62], [34, 20], [30, 24]]);
+  part(ctx, hull, paint(ctx, -34, 0, 34, 0, RAIDER), { box: [-35, -73, 35, 25], clean: -10, soot: -72, seed: 57 });
+  ctx.fillStyle = paint(ctx, -30, 0, 30, 0, RAIDER_DARK);
+  ctx.fillRect(-30, -80, 60, 11);
+  ctx.strokeStyle = OUTLINE;
+  ctx.lineWidth = 0.9;
+  ctx.strokeRect(-30, -80, 60, 11);
+  for (const x of [-22, -11, 0, 11, 22]) {
+    ctx.fillStyle = "#101115";
     ctx.beginPath();
-    ctx.arc(x + sway * 0.45, 10.5, 0.9, 0, TAU);
-    ctx.arc(x - sway * 0.4, 20, 1, 0, TAU);
+    ctx.arc(x, -80, 4.2, 0, Math.PI);
     ctx.fill();
   }
-  const dome = () => {
-    ctx.beginPath();
-    ctx.moveTo(-16, 3);
-    ctx.bezierCurveTo(-17, -19, 17, -19, 16, 3);
-    ctx.quadraticCurveTo(12, 0, 8, 4);
-    ctx.quadraticCurveTo(4, 0, 0, 4);
-    ctx.quadraticCurveTo(-4, 0, -8, 4);
-    ctx.quadraticCurveTo(-12, 0, -16, 3);
-  };
-  dome();
-  ctx.fillStyle = metal(ctx, -16, -12, 16, 4, TEAL);
-  ctx.fill();
-  ctx.save();
-  dome();
-  ctx.clip();
-  ctx.fillStyle = curvature(ctx, 0, -4, 18);
-  ctx.fillRect(-18, -20, 36, 26);
-  ctx.strokeStyle = "rgba(0,18,22,0.6)";
-  ctx.lineWidth = 0.8;
-  ctx.beginPath();
-  ctx.ellipse(0, -2, 12.5, 7, 0, Math.PI, TAU);
-  ctx.moveTo(-6, -13);
-  ctx.lineTo(-7, -2);
-  ctx.moveTo(6, -13);
-  ctx.lineTo(7, -2);
-  ctx.stroke();
-  ctx.restore();
-  dome();
-  ctx.strokeStyle = "rgba(215,255,248,0.85)";
-  ctx.lineWidth = 0.8;
-  ctx.stroke();
-  ctx.fillStyle = "rgba(255,255,255,0.8)";
-  ctx.beginPath();
-  ctx.ellipse(-6.5, -10.5, 3.2, 1.2, -0.5, 0, TAU);
-  ctx.fill();
-  // the energy core
-  ctx.shadowColor = "#ff4fd8";
-  ctx.shadowBlur = f ? 12 : 7;
-  ctx.fillStyle = f ? "#ffd8f7" : "#ff9ae8";
-  ctx.beginPath();
-  ctx.arc(0, -3, f ? 3.5 : 3, 0, TAU);
-  ctx.fill();
-}
-
-/** The crab: a shell of polished copper, two frames (the pincers open and close). */
-function drawCrab(ctx: CanvasRenderingContext2D, f: number) {
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  const leg = (s: number, i: number) => {
-    const y = -7 + i * 5;
-    ctx.beginPath();
-    ctx.moveTo(s * 12, y);
-    ctx.lineTo(s * 20, y - 6 + f);
-    ctx.lineTo(s * 23, y + 1);
-  };
+  // trenches with rows of windows along both sides
   for (const s of [-1, 1]) {
-    for (let i = 0; i < 3; i++) {
-      leg(s, i);
-      ctx.strokeStyle = "#3b1709";
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
-      leg(s, i);
-      ctx.strokeStyle = "rgba(255,196,150,0.4)";
+    ctx.fillStyle = "#14161a";
+    ctx.fillRect(s > 0 ? 26 : -30, -60, 4, 76);
+    lines(ctx, [[s * 25.5, -60, s * 25.5, 16], [s * 30.5, -60, s * 30.5, 16]], "rgba(200,206,214,0.35)", 0.6);
+    windows(s * 28, -58, 14, 7 + s);
+  }
+  // decks stepping up to the command tower
+  const deck = () => sym(ctx, [[0, -58], [21, -58], [23, -52], [23, 12], [19, 16]]);
+  part(ctx, deck, paint(ctx, -23, 0, 23, 0, RAIDER), { box: [-24, -59, 24, 17], clean: 0, soot: -58, seed: 61 });
+  const upper = () => poly(ctx, [[-14, -50], [14, -50], [14, -14], [-14, -14]]);
+  part(ctx, upper, paint(ctx, -14, 0, 14, 0, RAIDER), { box: [-15, -51, 15, -13], clean: -20, soot: -50, seed: 63 });
+  for (const s of [-1, 1]) windows(s * 18.5, -54, 10, 11 + s);
+  const tower = () => poly(ctx, [[-13, -42], [13, -42], [13, -36], [9, -36], [9, -27], [-9, -27], [-9, -36], [-13, -36]]);
+  part(ctx, tower, paint(ctx, -13, 0, 13, 0, RAIDER));
+  lamp(ctx, "#bfe2ff", () => ctx.fillRect(-11, -40, 22, 1.4), 5);
+  lines(ctx, [[-23, -20, 23, -20], [-23, 0, -14, 0], [14, 0, 23, 0], [0, -14, 0, -8]], SEAM, 0.8);
+  // the front bar, the gun pods at its ends (one with a pale marking), turrets, the green strip along its edge
+  const bar = () => poly(ctx, [[-88, 22], [88, 22], [88, 44], [81, 50], [-81, 50], [-88, 44]]);
+  part(ctx, bar, paint(ctx, 0, 22, 0, 50, RAIDER), { box: [-89, 21, 89, 51], clean: 50, soot: 22, seed: 67 });
+  lines(ctx, [[-60, 22, -60, 50], [-30, 22, -30, 50], [30, 22, 30, 50], [60, 22, 60, 50]], SEAM, 0.8);
+  for (const s of [-1, 1]) {
+    const x = s * 78;
+    const pod = () => {
+      rrect(ctx, x - 11, 2, 22, 44, 5);
+    };
+    part(ctx, pod, paint(ctx, x - 11, 0, x + 11, 0, s < 0 ? { ...RAIDER, mid: "#9c9a92", light: "#e2dfd6" } : RAIDER_DARK), {
+      box: [x - 12, 1, x + 12, 47],
+      clean: 46,
+      soot: 2,
+      seed: 71 + s,
+    });
+    lines(ctx, [[x - 11, 14, x + 11, 14], [x - 11, 34, x + 11, 34]], SEAM, 0.8);
+    ctx.fillStyle = "#14161a";
+    ctx.beginPath();
+    ctx.arc(x, 22, 6, 0, TAU);
+    ctx.fill();
+    lamp(ctx, "#7dff9a", () => {
+      ctx.beginPath();
+      ctx.arc(x, 22, 2.4, 0, TAU);
+      ctx.fill();
+    }, 8);
+    for (const tx of [s * 40, s * 58]) {
+      barrel(ctx, tx - 1.6, 34, 47, 1.8);
+      barrel(ctx, tx + 1.6, 34, 47, 1.8);
+      ctx.fillStyle = metal(ctx, tx - 5.5, 0, tx + 5.5, 0, GUNMETAL);
+      ctx.beginPath();
+      ctx.arc(tx, 33, 5.5, 0, TAU);
+      ctx.fill();
+      ctx.strokeStyle = OUTLINE;
       ctx.lineWidth = 0.8;
       ctx.stroke();
     }
   }
-  for (const s of [-1, 1]) {
-    ctx.strokeStyle = metal(ctx, s * 7, 6, s * 19, 22, COPPER);
-    ctx.lineWidth = 4.6;
-    ctx.beginPath();
-    ctx.moveTo(s * 9, 8);
-    ctx.quadraticCurveTo(s * 19, 13, s * 15, 21);
-    ctx.stroke();
-    const open = f ? 0.6 : 0.18;
-    ctx.strokeStyle = "#ffd6b0";
-    ctx.lineWidth = 2.4;
-    ctx.beginPath();
-    ctx.moveTo(s * 15, 21);
-    ctx.lineTo(s * 15 - s * 7 * Math.cos(open), 21 - 7 * Math.sin(open) + 2);
-    ctx.moveTo(s * 15, 21);
-    ctx.lineTo(s * 15 - s * 7 * Math.cos(open), 21 + 4 * Math.sin(open) + 3);
-    ctx.stroke();
-  }
-  const shell = () => {
-    ctx.beginPath();
-    ctx.moveTo(-12, -13);
-    ctx.lineTo(12, -13);
-    ctx.lineTo(17, 0);
-    ctx.lineTo(10, 12);
-    ctx.lineTo(-10, 12);
-    ctx.lineTo(-17, 0);
-    ctx.closePath();
+  lamp(ctx, "#8dffc0", () => ctx.fillRect(-70, 48.6, 140, 1.2), 6);
+  // small blocks of machinery on the decks
+  let seed = 97;
+  const r = () => {
+    seed = (seed * 16807) % 2147483647;
+    return (seed - 1) / 2147483646;
   };
-  shell();
-  ctx.fillStyle = metal(ctx, -17, -13, 17, 12, COPPER);
-  ctx.fill();
-  ctx.save();
-  shell();
-  ctx.clip();
-  ctx.fillStyle = curvature(ctx, 0, 0, 18);
-  ctx.fillRect(-18, -14, 36, 28);
-  ctx.restore();
-  shell();
-  ctx.strokeStyle = "rgba(24,6,2,0.95)";
-  ctx.lineWidth = 1.1;
-  ctx.stroke();
-  // plate seams, each with a light edge below it
-  ctx.lineWidth = 1;
-  ctx.strokeStyle = "rgba(36,9,3,0.75)";
-  ctx.beginPath();
-  ctx.moveTo(-11, -3);
-  ctx.lineTo(11, -3);
-  ctx.moveTo(-9, 4);
-  ctx.lineTo(9, 4);
-  ctx.moveTo(0, -13);
-  ctx.lineTo(0, -3);
-  ctx.stroke();
-  ctx.lineWidth = 0.6;
-  ctx.strokeStyle = "rgba(255,214,176,0.4)";
-  ctx.beginPath();
-  ctx.moveTo(-11, -2);
-  ctx.lineTo(11, -2);
-  ctx.moveTo(-9, 5);
-  ctx.lineTo(9, 5);
-  ctx.stroke();
-  ctx.fillStyle = "rgba(255,226,200,0.7)";
-  for (const [x, y] of [
-    [-8, -9],
-    [8, -9],
-    [-13, 0],
-    [13, 0],
-  ]) {
-    ctx.beginPath();
-    ctx.arc(x, y, 0.6, 0, TAU);
-    ctx.fill();
-  }
-  ctx.shadowColor = "#ffe066";
-  ctx.shadowBlur = 8;
-  ctx.fillStyle = "#fff3a6";
-  ctx.beginPath();
-  ctx.arc(-5, 8, 2.2, 0, TAU);
-  ctx.arc(5, 8, 2.2, 0, TAU);
-  ctx.fill();
-}
-
-/** The beetle: an armoured shell of anodised violet metal with a blue sheen. */
-function drawBeetle(ctx: CanvasRenderingContext2D) {
-  ctx.lineCap = "round";
-  ctx.strokeStyle = metal(ctx, -12, 18, 12, 28, { dark: "#33264f", mid: "#a893dc", light: "#ffffff" });
-  ctx.lineWidth = 3.6;
-  for (const s of [-1, 1]) {
-    ctx.beginPath();
-    ctx.moveTo(s * 6, 18);
-    ctx.quadraticCurveTo(s * 12, 26, s * 3, 28);
-    ctx.stroke();
-  }
-  const half = (s: number) => {
-    ctx.beginPath();
-    ctx.moveTo(0, -23);
-    ctx.bezierCurveTo(s * 18, -22, s * 25, -2, s * 18, 14);
-    ctx.quadraticCurveTo(s * 10, 22, 0, 21);
-    ctx.closePath();
-  };
-  for (const s of [-1, 1]) {
-    half(s);
-    ctx.fillStyle = metal(ctx, s * 24, -20, -s * 2, 18, VIOLET);
-    ctx.fill();
-    ctx.save();
-    half(s);
-    ctx.clip();
-    ctx.fillStyle = curvature(ctx, s * 9, -2, 24);
-    ctx.fillRect(-26, -24, 52, 48);
-    ctx.restore();
-    half(s);
-    ctx.strokeStyle = "rgba(12,2,26,0.9)";
-    ctx.lineWidth = 1;
-    ctx.stroke();
-  }
-  ctx.strokeStyle = "rgba(242,226,255,0.7)";
-  ctx.lineWidth = 0.9;
-  ctx.beginPath();
-  ctx.moveTo(0, -23);
-  ctx.lineTo(0, 21);
-  ctx.stroke();
-  for (const y of [-10, 2, 12]) {
-    const sx = 19 - Math.abs(y) * 0.25;
-    ctx.strokeStyle = "rgba(16,2,34,0.6)";
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(-sx, y);
-    ctx.quadraticCurveTo(0, y + 5, sx, y);
-    ctx.stroke();
-    ctx.strokeStyle = "rgba(210,190,255,0.3)";
-    ctx.lineWidth = 0.6;
-    ctx.beginPath();
-    ctx.moveTo(-sx, y + 1.2);
-    ctx.quadraticCurveTo(0, y + 6.2, sx, y + 1.2);
-    ctx.stroke();
-  }
-  ctx.fillStyle = "rgba(255,255,255,0.55)";
-  ctx.beginPath();
-  ctx.ellipse(-9, -13, 2.4, 6, 0.5, 0, TAU);
-  ctx.fill();
-  ctx.shadowColor = "#7dff9a";
-  ctx.shadowBlur = 10;
-  ctx.fillStyle = "#c9ffd6";
-  for (const s of [-1, 1]) {
-    ctx.beginPath();
-    ctx.ellipse(s * 9, -5, 2.8, 4.2, s * 0.3, 0, TAU);
-    ctx.fill();
-  }
-}
-
-/** The queen: a great disc of dark violet chrome, armour plates, glowing pods. */
-function drawQueen(ctx: CanvasRenderingContext2D) {
-  ctx.lineCap = "round";
-  for (const s of [-1, 1]) {
-    ctx.fillStyle = metal(ctx, s * 78 - 20, 0, s * 78 + 20, 36, GUNMETAL);
-    ctx.beginPath();
-    ctx.arc(s * 78, 18, 19, 0, TAU);
-    ctx.fill();
-    const g = ctx.createRadialGradient(s * 78, 18, 1, s * 78, 18, 11);
-    g.addColorStop(0, "#fff0c8");
-    g.addColorStop(0.45, "#ff9a3c");
-    g.addColorStop(1, "rgba(120,30,10,0)");
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(s * 78, 18, 11, 0, TAU);
-    ctx.fill();
-  }
-  for (let i = -3; i <= 3; i++) {
-    ctx.fillStyle = metal(ctx, i * 20 - 8, 0, i * 20 + 8, 0, { dark: "#2a1238", mid: "#8a5aa6", light: "#f4dcff" });
-    ctx.beginPath();
-    ctx.moveTo(i * 20 - 7, -52 + Math.abs(i) * 6);
-    ctx.lineTo(i * 22, -78 + Math.abs(i) * 9);
-    ctx.lineTo(i * 20 + 7, -52 + Math.abs(i) * 6);
-    ctx.fill();
-  }
-  const body = () => {
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 90, 66, 0, 0, TAU);
-  };
-  body();
-  ctx.fillStyle = metal(ctx, -90, -66, 90, 66, ROYAL);
-  ctx.fill();
-  ctx.save();
-  body();
-  ctx.clip();
-  ctx.fillStyle = curvature(ctx, 0, 0, 96);
-  ctx.fillRect(-92, -68, 184, 136);
-  ctx.restore();
-  body();
-  ctx.shadowColor = "#ff5fd2";
-  ctx.shadowBlur = 12;
-  ctx.strokeStyle = "#ff8be3";
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  ctx.shadowBlur = 0;
-  for (let i = 0; i < 10; i++) {
-    const a = (i / 10) * TAU + 0.15;
-    ctx.strokeStyle = "rgba(10,2,16,0.6)";
-    ctx.lineWidth = 7;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 72, 52, 0, a, a + 0.42);
-    ctx.stroke();
-    ctx.strokeStyle = "rgba(255,220,255,0.38)";
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.ellipse(0, -1.5, 72, 52, 0, a, a + 0.42);
-    ctx.stroke();
-  }
-  ctx.fillStyle = metal(ctx, -32, -28, 32, 36, GUNMETAL);
-  ctx.beginPath();
-  ctx.arc(0, 4, 32, 0, TAU);
-  ctx.fill();
-  ctx.shadowColor = "#ff8be6";
-  ctx.shadowBlur = 10;
-  ctx.strokeStyle = "#ffb0ee";
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  ctx.shadowColor = "#ffb347";
-  ctx.fillStyle = "#ffcf7a";
-  for (const s of [-1, 0, 1]) {
-    ctx.beginPath();
-    ctx.ellipse(s * 22, 48, 5, 3, 0, 0, TAU);
-    ctx.fill();
+  for (let i = 0; i < 26; i++) {
+    const x = (r() - 0.5) * 40;
+    const y = -56 + r() * 66;
+    if (Math.abs(x) < 15 && y > -50 && y < -14) continue;
+    ctx.fillStyle = r() < 0.5 ? "rgba(26,28,33,0.7)" : "rgba(210,214,220,0.28)";
+    ctx.fillRect(x, y, 2 + r() * 4, 2 + r() * 5);
   }
 }
 
 function drawPowerUp(ctx: CanvasRenderingContext2D, kind: PowerKind) {
   const color = POWER_COLOR[kind];
   const bg = ctx.createRadialGradient(0, -4, 2, 0, 0, 14);
-  bg.addColorStop(0, "rgba(40,48,90,0.95)");
-  bg.addColorStop(1, "rgba(8,10,26,0.95)");
+  bg.addColorStop(0, "rgba(52,46,40,0.95)");
+  bg.addColorStop(1, "rgba(14,12,10,0.95)");
   ctx.fillStyle = bg;
   ctx.beginPath();
   ctx.arc(0, 0, 13, 0, TAU);
@@ -847,49 +845,31 @@ function drawPowerUp(ctx: CanvasRenderingContext2D, kind: PowerKind) {
   }
 }
 
-/** a bolt of plasma, pointing up, bright head and a fading tail */
-function plasmaSprite(res: number, rgb: string, w: number, h: number) {
+/** a blaster bolt, pointing up: a coloured glow around a white-hot core, brightest at the head */
+function boltSprite(res: number, rgb: string, w: number, h: number) {
   // (room around it for the glow)
   return makeSprite(w + 26, h + 26, res, (ctx) => {
     ctx.shadowColor = `rgb(${rgb})`;
     ctx.shadowBlur = 12;
     const g = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
     g.addColorStop(0, `rgba(${rgb},1)`);
-    g.addColorStop(0.5, `rgba(${rgb},0.75)`);
-    g.addColorStop(1, `rgba(${rgb},0)`);
+    g.addColorStop(0.7, `rgba(${rgb},0.85)`);
+    g.addColorStop(1, `rgba(${rgb},0.15)`);
     ctx.fillStyle = g;
     rrect(ctx, -w / 2, -h / 2, w, h, w / 2);
     ctx.fill();
     ctx.shadowBlur = 0;
     const c = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
     c.addColorStop(0, "rgba(255,255,255,1)");
-    c.addColorStop(0.6, "rgba(255,255,255,0.45)");
+    c.addColorStop(0.75, "rgba(255,255,255,0.8)");
     c.addColorStop(1, "rgba(255,255,255,0)");
     ctx.fillStyle = c;
-    rrect(ctx, -w / 4, -h / 2 + 1, w / 2, h * 0.8, w / 4);
+    rrect(ctx, -w / 4, -h / 2 + 1, w / 2, h * 0.85, w / 4);
     ctx.fill();
   });
 }
 
-function orbSprite(res: number, color: string, r: number) {
-  return makeSprite(r * 5, r * 5, res, (ctx) => {
-    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 2.5);
-    g.addColorStop(0, "#ffffff");
-    g.addColorStop(0.2, "#ffffff");
-    g.addColorStop(0.34, color);
-    g.addColorStop(0.62, color + "44");
-    g.addColorStop(1, color + "00");
-    ctx.fillStyle = g;
-    ctx.fillRect(-r * 2.5, -r * 2.5, r * 5, r * 5);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.arc(0, 0, r * 1.1, 0, TAU);
-    ctx.stroke();
-  });
-}
-
-/** a sharp needle of light, pointing up */
+/** a sharp, diamond-shaped bolt, pointing up (the bombers' spread shot: a shape of its own, not only a colour) */
 function needleSprite(res: number, color: string) {
   return makeSprite(16, 34, res, (ctx) => {
     ctx.shadowColor = color;
@@ -966,50 +946,50 @@ function planetSprite(res: number, r: number, light: string, dark: string, ring:
 class Sprites {
   readonly player: Sprite;
   readonly flame: Sprite;
-  readonly enemy: Record<Kind, Sprite[]>;
-  readonly white: Record<Kind, Sprite[]>;
+  readonly enemy: Record<Kind, Sprite>;
+  readonly white: Record<Kind, Sprite>;
   readonly power: Record<PowerKind, Sprite>;
   readonly bolt: Sprite;
   readonly boltHeavy: Sprite;
-  readonly orbPink: Sprite;
-  readonly orbViolet: Sprite;
+  readonly enemyBolt: Sprite;
+  readonly enemyBoltHeavy: Sprite;
   readonly needle: Sprite;
   readonly smoke: Sprite;
   readonly glow: Record<Glow, Sprite>;
 
   constructor(readonly res: number) {
-    this.player = makeSprite(64, 64, res, drawPlayer);
+    this.player = makeSprite(64, 72, res, drawPlayer);
     this.flame = makeSprite(18, 46, res, drawFlame);
     this.enemy = {
-      drone: [0, 1].map((f) => makeSprite(44, 50, res, (c) => drawDrone(c, f))),
-      crab: [0, 1].map((f) => makeSprite(56, 58, res, (c) => drawCrab(c, f))),
-      beetle: [makeSprite(62, 66, res, drawBeetle)],
-      queen: [makeSprite(220, 180, res, drawQueen)],
+      drone: makeSprite(44, 50, res, drawDrone),
+      crab: makeSprite(60, 60, res, drawCrab),
+      beetle: makeSprite(58, 70, res, drawBeetle),
+      queen: makeSprite(220, 180, res, drawQueen),
     };
     this.white = {
-      drone: this.enemy.drone.map(whiteOf),
-      crab: this.enemy.crab.map(whiteOf),
-      beetle: this.enemy.beetle.map(whiteOf),
-      queen: this.enemy.queen.map(whiteOf),
+      drone: whiteOf(this.enemy.drone),
+      crab: whiteOf(this.enemy.crab),
+      beetle: whiteOf(this.enemy.beetle),
+      queen: whiteOf(this.enemy.queen),
     };
     this.power = {
       weapon: makeSprite(36, 36, res, (c) => drawPowerUp(c, "weapon")),
       shield: makeSprite(36, 36, res, (c) => drawPowerUp(c, "shield")),
       life: makeSprite(36, 36, res, (c) => drawPowerUp(c, "life")),
     };
-    this.bolt = plasmaSprite(res, "79,230,255", 6, 26);
-    this.boltHeavy = plasmaSprite(res, "170,150,255", 9, 32);
-    this.orbPink = orbSprite(res, "#ff4fd8", 5);
-    this.orbViolet = orbSprite(res, "#b36bff", 6);
-    this.needle = needleSprite(res, "#ff9a3c");
+    // (yours: long and thin, red; theirs: short and fat, green; the bombers' diamonds)
+    this.bolt = boltSprite(res, "255,62,44", 5, 28);
+    this.boltHeavy = boltSprite(res, "255,128,52", 8, 34);
+    this.enemyBolt = boltSprite(res, "70,255,110", 7, 16);
+    this.enemyBoltHeavy = boltSprite(res, "120,255,140", 9, 20);
+    this.needle = needleSprite(res, "#8dff6a");
     this.smoke = smokeSprite(res);
     this.glow = {
-      cyan: glowDot(res, "#3fd8ff"),
-      orange: glowDot(res, "#ff8a2a"),
-      pink: glowDot(res, "#ff4fd8"),
-      white: glowDot(res, "#dfe8ff"),
-      violet: glowDot(res, "#a35cff"),
-      teal: glowDot(res, "#3dffc8"),
+      red: glowDot(res, "#ff4a3a"),
+      amber: glowDot(res, "#ffb347"),
+      fire: glowDot(res, "#ff8a2a"),
+      ice: glowDot(res, "#8ec9ff"),
+      white: glowDot(res, "#fff1dc"),
       yellow: glowDot(res, "#ffd84a"),
     };
   }
@@ -1611,9 +1591,9 @@ class Shooter {
     if (!this.sprites || this.sprites.res !== res) this.sprites = new Sprites(res);
     this.backdrop.resize(this.ctx, this.canvas.width, this.canvas.height, this.dpr, { x: Math.round(this.ox * this.dpr), w: Math.round(W * this.scale * this.dpr) });
     this.frameStroke = this.ctx.createLinearGradient(0, 0, W, H);
-    this.frameStroke.addColorStop(0, "rgba(98,240,255,0.8)");
-    this.frameStroke.addColorStop(0.5, "rgba(140,150,255,0.35)");
-    this.frameStroke.addColorStop(1, "rgba(255,125,220,0.75)");
+    this.frameStroke.addColorStop(0, "rgba(255,179,71,0.8)");
+    this.frameStroke.addColorStop(0.5, "rgba(255,150,70,0.3)");
+    this.frameStroke.addColorStop(1, "rgba(255,74,58,0.7)");
   }
 
   private toGame(cx: number, cy: number): Vec {
@@ -1739,9 +1719,9 @@ class Shooter {
     this.nextDive = 3.2;
     this.warp = this.opts.reducedMotion ? 0 : 1;
     const boss = this.wave % 5 === 0;
-    if (boss) this.showBanner("Schwarmkönigin", `Welle ${this.wave}`, true);
-    else this.showBanner(`Welle ${this.wave}`, this.wave === 1 ? "Der Schwarm kommt" : "");
-    this.say(boss ? `Welle ${this.wave}: die Schwarmkönigin` : `Welle ${this.wave}`);
+    if (boss) this.showBanner("Flaggschiff", `Welle ${this.wave}`, true);
+    else this.showBanner(`Welle ${this.wave}`, this.wave === 1 ? "Die Plünderer kommen" : "");
+    this.say(boss ? `Welle ${this.wave}: das Flaggschiff` : `Welle ${this.wave}`);
     this.opts.audio.sfx("wave");
     this.spawns = [];
     if (boss) {
@@ -1914,19 +1894,19 @@ class Shooter {
     this.prevX = p.x;
     this.bank += (clamp(vx / 520, -1, 1) - this.bank) * (1 - Math.exp(-dt * 10));
 
-    // exhaust
-    for (const x of [-6.5, 6.5]) {
+    // exhaust from the two nacelles
+    for (const x of [-20, 20]) {
       if (Math.random() < 0.65) {
         this.particles.push({
           x: p.x + x + rand(-1.5, 1.5),
-          y: p.y + 28,
+          y: p.y + 27,
           vx: rand(-18, 18),
           vy: rand(150, 230),
           life: 0.22,
           max: 0.22,
           size: rand(5, 8),
           grow: -0.4,
-          sprite: this.sprites.glow.cyan,
+          sprite: this.sprites.glow.fire,
           drag: 2,
         });
       }
@@ -1938,30 +1918,30 @@ class Shooter {
       p.fire = p.level >= 2 ? 0.095 : 0.12;
       const heavy = p.level >= 5;
       const sprite = heavy ? this.sprites.boltHeavy : this.sprites.bolt;
-      const shoot = (x: number, angle: number) => {
+      const shoot = (x: number, y: number, angle: number) => {
         const speed = 980;
         this.shots.push({
           x: p.x + x,
-          y: p.y - 26,
+          y: p.y + y,
           vx: Math.sin(angle) * speed,
           vy: -Math.cos(angle) * speed,
           r: heavy ? 6 : 4,
           dmg: heavy ? 2 : 1,
           sprite,
-          turn: true,
           dead: false,
         });
         this.fired++;
       };
-      shoot(-7, 0);
-      shoot(7, 0);
+      // (the twin cannons forward of the wings; with more fire power the nacelles fire too, fanning out)
+      shoot(-13, -28, 0);
+      shoot(13, -28, 0);
       if (p.level >= 3) {
-        shoot(-12, -0.14);
-        shoot(12, 0.14);
+        shoot(-20, -15, -0.12);
+        shoot(20, -15, 0.12);
       }
       if (p.level >= 4) {
-        shoot(-16, -0.28);
-        shoot(16, 0.28);
+        shoot(-21, -13, -0.26);
+        shoot(21, -13, 0.26);
       }
       this.muzzle = 0.05;
       this.opts.audio.sfx("shot");
@@ -2030,7 +2010,7 @@ class Shooter {
               max: 0.35,
               size: rand(10, 16),
               grow: -0.5,
-              sprite: this.sprites.glow[KIND_GLOW[e.kind]],
+              sprite: this.sprites.glow.ice,
               drag: 1,
             });
           }
@@ -2077,18 +2057,18 @@ class Shooter {
     const rage = e.hp < e.maxHp * 0.4 ? 1.35 : 1;
     switch (e.attack) {
       case 0: {
-        // rings of orbs
+        // rings of heavy bolts
         const n = 18;
         const off = e.step * 0.17;
         for (let i = 0; i < n; i++) {
           const a = (i / n) * TAU + off;
-          this.bullets.push(this.orb(e.x, e.y + 20, Math.cos(a) * speed * 0.75, Math.sin(a) * speed * 0.75, this.sprites.orbViolet, 6));
+          this.bullets.push(this.enemyBolt(e.x, e.y + 20, Math.cos(a) * speed * 0.75, Math.sin(a) * speed * 0.75, this.sprites.enemyBoltHeavy, 6));
         }
         e.attackT = 0.42 / rage;
         break;
       }
       case 1: {
-        // aimed fans of needles from the side pods
+        // aimed fans of diamond bolts from the gun pods
         for (const s of [-1, 1]) {
           const ox = e.x + s * 78;
           const oy = e.y + 18;
@@ -2105,13 +2085,13 @@ class Shooter {
         // a turning double spiral
         for (const s of [0, Math.PI]) {
           const a = e.step * 0.33 + s;
-          this.bullets.push(this.orb(e.x, e.y + 10, Math.cos(a) * speed * 0.8, Math.abs(Math.sin(a)) * speed * 0.8 + 30, this.sprites.orbPink, 5));
+          this.bullets.push(this.enemyBolt(e.x, e.y + 10, Math.cos(a) * speed * 0.8, Math.abs(Math.sin(a)) * speed * 0.8 + 30, this.sprites.enemyBolt, 5));
         }
         e.attackT = 0.06 / rage;
         break;
       }
       default: {
-        // calls drones that dive at once
+        // launches fighters that dive at once
         for (let i = 0; i < 4; i++) {
           const d = this.makeEnemy("drone", e.x + (i - 1.5) * 40, e.y + 40);
           d.state = "dive";
@@ -2137,12 +2117,12 @@ class Shooter {
     }
   }
 
-  private orb(x: number, y: number, vx: number, vy: number, sprite: Sprite, r: number): Bullet {
-    return { x, y, vx, vy, r, dmg: 1, sprite, turn: false, dead: false };
+  private enemyBolt(x: number, y: number, vx: number, vy: number, sprite: Sprite, r: number): Bullet {
+    return { x, y, vx, vy, r, dmg: 1, sprite, dead: false };
   }
 
   private needle(x: number, y: number, vx: number, vy: number): Bullet {
-    return { x, y, vx, vy, r: 5, dmg: 1, sprite: this.sprites.needle, turn: true, dead: false };
+    return { x, y, vx, vy, r: 5, dmg: 1, sprite: this.sprites.needle, dead: false };
   }
 
   private enemyShoot(e: Enemy, speed: number) {
@@ -2155,7 +2135,7 @@ class Shooter {
       }
     } else {
       const a = base + rand(-0.08, 0.08);
-      this.bullets.push(this.orb(e.x, e.y + 12, Math.cos(a) * speed, Math.sin(a) * speed, this.sprites.orbPink, 5));
+      this.bullets.push(this.enemyBolt(e.x, e.y + 12, Math.cos(a) * speed, Math.sin(a) * speed, this.sprites.enemyBolt, 5));
     }
   }
 
@@ -2172,7 +2152,7 @@ class Shooter {
         if (hit) {
           b.dead = true;
           this.hits++;
-          this.spark(b.x, b.y - 4, 4, this.sprites.glow.cyan, 170);
+          this.spark(b.x, b.y - 4, 4, this.sprites.glow.fire, 170);
           this.damage(e, b.dmg);
           break;
         }
@@ -2185,7 +2165,7 @@ class Shooter {
       if (b.dead || !p.alive) continue;
       if (p.shield > 0 && Math.hypot(b.x - p.x, b.y - p.y) < 36) {
         b.dead = true;
-        this.spark(b.x, b.y, 5, this.sprites.glow.cyan, 130);
+        this.spark(b.x, b.y, 5, this.sprites.glow.ice, 130);
       } else if (p.invuln <= 0 && Math.hypot(b.x - p.x, b.y - p.y) < b.r + 5) {
         b.dead = true;
         this.hurtPlayer();
@@ -2288,11 +2268,10 @@ class Shooter {
 
   private explosion(x: number, y: number, kind: Kind | "player") {
     const g = this.sprites.glow;
-    const color = KIND_COLOR[kind];
-    const main = kind === "player" ? g.cyan : g[KIND_GLOW[kind]];
+    const main = g.fire;
     const big = kind === "player" || kind === "beetle";
     this.particles.push({ x, y, vx: 0, vy: 0, life: 0.22, max: 0.22, size: big ? 130 : 90, grow: 0.3, sprite: g.white, drag: 0 });
-    this.rings.push({ x, y, max: big ? 96 : 62, life: 0.45, dur: 0.45, color, width: big ? 4 : 3 });
+    this.rings.push({ x, y, max: big ? 96 : 62, life: 0.45, dur: 0.45, color: BLAST, width: big ? 4 : 3 });
     const n = big ? 40 : 24;
     for (let i = 0; i < n; i++) {
       const a = Math.random() * TAU;
@@ -2323,7 +2302,7 @@ class Shooter {
         size: rand(3, 6),
         life: rand(0.5, 0.9),
         max: 0.9,
-        color,
+        color: DEBRIS[kind],
       });
     }
     for (let i = 0; i < (big ? 6 : 3); i++) {
@@ -2342,7 +2321,7 @@ class Shooter {
       const ex = x + rand(-80, 80);
       const ey = y + rand(-50, 50);
       this.particles.push({ x: ex, y: ey, vx: 0, vy: 0, life: 0.4 + k * 0.08, max: 0.4 + k * 0.08, size: rand(110, 190), grow: 0.4, sprite: this.sprites.glow.white, drag: 0 });
-      this.rings.push({ x: ex, y: ey, max: rand(90, 160), life: 0.5 + k * 0.06, dur: 0.5 + k * 0.06, color: k % 2 ? "#ff7ddc" : "#ffb85c", width: 4 });
+      this.rings.push({ x: ex, y: ey, max: rand(90, 160), life: 0.5 + k * 0.06, dur: 0.5 + k * 0.06, color: k % 2 ? "#ffd9a0" : BLAST, width: 4 });
       for (let i = 0; i < 22; i++) {
         const a = Math.random() * TAU;
         const v = rand(60, 420);
@@ -2355,14 +2334,14 @@ class Shooter {
           max: 1.4,
           size: rand(10, 26),
           grow: 0,
-          sprite: i % 2 ? this.sprites.glow.pink : this.sprites.glow.orange,
+          sprite: i % 2 ? this.sprites.glow.yellow : this.sprites.glow.fire,
           drag: 1.8,
         });
       }
       for (let i = 0; i < 6; i++) {
         const a = Math.random() * TAU;
         const v = rand(80, 300);
-        this.shards.push({ x: ex, y: ey, vx: Math.cos(a) * v, vy: Math.sin(a) * v, rot: 0, spin: rand(-10, 10), size: rand(4, 9), life: rand(0.8, 1.3), max: 1.3, color: "#c86bd8" });
+        this.shards.push({ x: ex, y: ey, vx: Math.cos(a) * v, vy: Math.sin(a) * v, rot: 0, spin: rand(-10, 10), size: rand(4, 9), life: rand(0.8, 1.3), max: 1.3, color: DEBRIS.queen });
       }
     }
   }
@@ -2396,7 +2375,7 @@ class Shooter {
     this.puffs = this.puffs.filter((f) => f.life > 0);
   }
 
-  // ---------- the HTML on top: scores, the queen's health ----------
+  // ---------- the HTML on top: scores, the flagship's health ----------
 
   private syncHud(dt: number) {
     const h = this.hud;
@@ -2472,7 +2451,7 @@ class Shooter {
     }
     if (this.flash > 0) {
       ctx.globalCompositeOperation = "lighter";
-      ctx.fillStyle = `rgba(255,236,255,${(this.flash * 0.35).toFixed(3)})`;
+      ctx.fillStyle = `rgba(255,238,215,${(this.flash * 0.35).toFixed(3)})`;
       ctx.fillRect(0, 0, cw, ch);
       ctx.globalCompositeOperation = "source-over";
     }
@@ -2489,7 +2468,7 @@ class Shooter {
   private drawGrid(ctx: CanvasRenderingContext2D) {
     ctx.fillStyle = "rgba(4,6,18,0.52)";
     ctx.fillRect(0, 0, W, H);
-    ctx.strokeStyle = "rgba(120,180,255,0.05)";
+    ctx.strokeStyle = "rgba(255,179,71,0.045)";
     ctx.lineWidth = 1;
     ctx.beginPath();
     const off = this.grid % 60;
@@ -2517,7 +2496,7 @@ class Shooter {
       ctx.stroke();
       ctx.globalAlpha = 1;
     }
-    ctx.strokeStyle = "#62f0ff";
+    ctx.strokeStyle = HUD;
     ctx.lineWidth = 2.5;
     ctx.lineCap = "round";
     const L = 30;
@@ -2537,53 +2516,74 @@ class Shooter {
   }
 
   private drawEnemy(ctx: CanvasRenderingContext2D, e: Enemy, t: number, x = e.x, y = e.y) {
-    const frames = this.sprites.enemy[e.kind];
-    const f = frames.length > 1 ? Math.abs(Math.floor(t * 5 + e.phase)) % frames.length : 0;
-    // a soft glow in the enemy's colour
-    ctx.globalCompositeOperation = "lighter";
-    ctx.globalAlpha = 0.4;
-    this.put(ctx, this.sprites.glow[KIND_GLOW[e.kind]], x, y, (e.r * (e.kind === "queen" ? 3.2 : 4)) / 32);
-    ctx.globalAlpha = 1;
-    ctx.globalCompositeOperation = "source-over";
     ctx.save();
     ctx.translate(x, y);
+    // (banking through the turns of a dive)
     if (e.state === "dive" || e.state === "enter") ctx.rotate(Math.sin(t * 5 + e.phase) * 0.25);
-    const wob = e.kind === "drone" ? 1 + Math.sin(t * 6 + e.phase) * 0.05 : 1;
-    ctx.scale(1 / wob, wob);
-    this.put(ctx, frames[f], 0, 0);
+    // the cold engines glow at the back
+    ctx.globalCompositeOperation = "lighter";
+    ctx.globalAlpha = 0.75 + 0.25 * Math.sin(t * 31 + e.phase * 7);
+    for (const [ex, ey, s] of ENGINE_SPOTS[e.kind]) this.put(ctx, this.sprites.glow.ice, ex, ey, s);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = "source-over";
+    this.put(ctx, this.sprites.enemy[e.kind], 0, 0);
     if (e.flash > 0) {
-      // (the queen takes hits all the time: only a light flash, or she would look white)
+      // (the flagship takes hits all the time: only a light flash, or it would look white)
       ctx.globalAlpha = e.kind === "queen" ? 0.28 : 0.85;
-      this.put(ctx, this.sprites.white[e.kind][f], 0, 0);
+      this.put(ctx, this.sprites.white[e.kind], 0, 0);
       ctx.globalAlpha = 1;
     }
     ctx.restore();
-    if (e.kind === "queen") this.drawQueenEye(ctx, e);
+    if (e.kind === "queen") this.drawTurret(ctx, e);
     else if (e.hp < e.maxHp && e.maxHp > 1) {
       // tougher ones show their health
       const w = 26;
       ctx.fillStyle = "rgba(255,255,255,0.14)";
       ctx.fillRect(x - w / 2, y + e.r + 8, w, 3);
-      ctx.fillStyle = KIND_COLOR[e.kind];
+      ctx.fillStyle = HUD;
       ctx.fillRect(x - w / 2, y + e.r + 8, (w * Math.max(0, e.hp)) / e.maxHp, 3);
     }
   }
 
-  private drawQueenEye(ctx: CanvasRenderingContext2D, e: Enemy) {
+  /** The flagship's big gun turret, turning after the player; badly hit, fires break out on the hull. */
+  private drawTurret(ctx: CanvasRenderingContext2D, e: Enemy) {
     const p = this.player;
-    const a = Math.atan2(p.y - e.y, p.x - e.x);
+    const t = this.time;
+    const cx = e.x;
+    const cy = e.y + 4;
+    const a = Math.atan2(p.y - cy, p.x - cx);
+    const hurt = e.hp < e.maxHp * 0.4;
     ctx.save();
-    ctx.shadowColor = "#ff5fd2";
-    ctx.shadowBlur = 18;
-    ctx.fillStyle = "#ffd6f5";
+    if (hurt) {
+      ctx.globalCompositeOperation = "lighter";
+      FIRES.forEach(([fx, fy], i) => {
+        ctx.globalAlpha = 0.55 + 0.45 * Math.abs(Math.sin(t * (7 + i * 1.7) + i));
+        this.put(ctx, this.sprites.glow.fire, e.x + fx, e.y + fy, 0.7 + 0.25 * Math.sin(t * 11 + i * 2));
+      });
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+    }
+    ctx.translate(cx, cy);
+    ctx.fillStyle = "#17191e";
     ctx.beginPath();
-    ctx.ellipse(e.x, e.y + 4, 22, 15 + Math.sin(this.time * 2) * 1.5, 0, 0, TAU);
+    ctx.arc(0, 0, 15, 0, TAU);
     ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = e.hp < e.maxHp * 0.4 ? "#c0002a" : "#43003a";
+    ctx.rotate(a - Math.PI / 2);
+    for (const s of [-1, 1]) {
+      ctx.fillStyle = metal(ctx, s * 3.4 - 1.6, 0, s * 3.4 + 1.6, 0, GUNMETAL);
+      ctx.fillRect(s * 3.4 - 1.6, 4, 3.2, 21);
+      ctx.fillStyle = "#101114";
+      ctx.fillRect(s * 3.4 - 2.2, 22, 4.4, 4);
+    }
+    ctx.fillStyle = metal(ctx, -11, -11, 11, 11, RAIDER);
     ctx.beginPath();
-    ctx.arc(e.x + Math.cos(a) * 9, e.y + 4 + Math.sin(a) * 6, 8, 0, TAU);
+    ctx.arc(0, 0, 11, 0, TAU);
     ctx.fill();
+    ctx.strokeStyle = OUTLINE;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    lines(ctx, [[-11, -2, 11, -2]], SEAM, 0.8);
+    lamp(ctx, hurt ? "#ff5a3a" : "#7dff9a", () => ctx.fillRect(-4, 4.5, 8, 1.6), 8);
     ctx.restore();
   }
 
@@ -2593,7 +2593,7 @@ class Shooter {
     // engine flames
     ctx.globalCompositeOperation = "lighter";
     const flick = 0.85 + Math.sin(t * 43) * 0.1 + Math.sin(t * 71) * 0.05;
-    for (const ex of [-6.5, 6.5]) {
+    for (const ex of [-20, 20]) {
       const f = this.sprites.flame;
       const h = f.h * 0.62 * flick;
       ctx.drawImage(f.img, x + ex - f.w * 0.3, y + 22, f.w * 0.6, h);
@@ -2625,7 +2625,7 @@ class Shooter {
       const pulse = 1 + Math.sin(u.t * 6) * 0.06;
       ctx.globalCompositeOperation = "lighter";
       ctx.globalAlpha = 0.5;
-      this.put(ctx, g[u.kind === "weapon" ? "orange" : u.kind === "shield" ? "cyan" : "pink"], u.x, u.y, 1.9);
+      this.put(ctx, g[u.kind === "weapon" ? "amber" : u.kind === "shield" ? "ice" : "red"], u.x, u.y, 1.9);
       ctx.globalAlpha = 0.9;
       ctx.strokeStyle = POWER_COLOR[u.kind];
       ctx.lineWidth = 1.6;
@@ -2649,7 +2649,7 @@ class Shooter {
       this.drawPlayer(ctx, p.x, p.y, this.bank, alpha);
       if (this.muzzle > 0) {
         ctx.globalCompositeOperation = "lighter";
-        for (const x of [-7, 7]) this.put(ctx, g.cyan, p.x + x, p.y - 28, 0.7);
+        for (const x of [-13, 13]) this.put(ctx, g.red, p.x + x, p.y - 28, 0.7);
         ctx.globalCompositeOperation = "source-over";
       }
       if (p.shield > 0) this.drawShield(ctx, p.x, p.y, p.shield < 2 ? 0.35 + 0.45 * Math.abs(Math.sin(t * 9)) : 1);
@@ -2658,10 +2658,7 @@ class Shooter {
     // bolts, bullets, sparks, rings: light adds up
     ctx.globalCompositeOperation = "lighter";
     for (const b of this.shots) this.drawTurned(ctx, b);
-    for (const b of this.bullets) {
-      if (b.turn) this.drawTurned(ctx, b);
-      else this.put(ctx, b.sprite, b.x, b.y, 1 + Math.sin(t * 20 + b.x) * 0.08);
-    }
+    for (const b of this.bullets) this.drawTurned(ctx, b);
     for (const q of this.particles) {
       const l = clamp(q.life / q.max, 0, 1);
       ctx.globalAlpha = l;
@@ -2729,9 +2726,9 @@ class Shooter {
     const r = 36;
     ctx.globalCompositeOperation = "lighter";
     const fill = ctx.createRadialGradient(x, y, r * 0.45, x, y, r);
-    fill.addColorStop(0, "rgba(98,240,255,0)");
-    fill.addColorStop(0.85, `rgba(98,240,255,${(0.16 * a).toFixed(3)})`);
-    fill.addColorStop(1, `rgba(98,240,255,${(0.42 * a).toFixed(3)})`);
+    fill.addColorStop(0, "rgba(142,201,255,0)");
+    fill.addColorStop(0.85, `rgba(142,201,255,${(0.16 * a).toFixed(3)})`);
+    fill.addColorStop(1, `rgba(142,201,255,${(0.42 * a).toFixed(3)})`);
     ctx.fillStyle = fill;
     ctx.beginPath();
     ctx.arc(x, y, r, 0, TAU);
@@ -2747,7 +2744,7 @@ class Shooter {
     ctx.globalCompositeOperation = "source-over";
   }
 
-  /** behind the start menu: the swarm swaying in formation, the ship waiting below */
+  /** behind the start menu: the raiders swaying in formation, your fighter waiting below */
   private drawTitleScene(ctx: CanvasRenderingContext2D) {
     const t = this.time;
     const kinds: Kind[] = ["beetle", "crab", "crab", "drone", "drone"];
@@ -2767,7 +2764,7 @@ class Shooter {
 const PAUSE_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6v12M15 6v12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
 const PLAY_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5L8 5.5Z" fill="currentColor"/></svg>`;
 const CLOSE_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
-const LIFE_ICON = `<svg viewBox="-30 -32 60 58" aria-hidden="true"><path fill="currentColor" d="M0 -31L5 -17L9 -5L27 9L28 17L11 14L8 24L-8 24L-11 14L-28 17L-27 9L-9 -5L-5 -17Z"/></svg>`;
+const LIFE_ICON = `<svg viewBox="-27 -34 54 60" aria-hidden="true"><path fill="currentColor" d="M0 -32L3 -23L6 -10L6 0L15.5 2L15.5 -11Q15.5 -14 19 -14L21 -14Q24.5 -14 24.5 -11L24.5 20Q24.5 23 21 23L19 23Q15.5 23 15.5 20L15.5 12L6 11L6 22L3.5 25L-3.5 25L-6 22L-6 11L-15.5 12L-15.5 20Q-15.5 23 -19 23L-21 23Q-24.5 23 -24.5 20L-24.5 -11Q-24.5 -14 -21 -14L-19 -14Q-15.5 -14 -15.5 -11L-15.5 2L-6 0L-6 -10L-3 -23Z M11.6 -27h2.8v26h-2.8Z M-14.4 -27h2.8v26h-2.8Z"/></svg>`;
 
 const TEMPLATE = `
   <canvas class="game-canvas" tabindex="-1" aria-label="Spielfeld"></canvas>
@@ -2811,21 +2808,21 @@ const TEMPLATE = `
       <div class="gh-block">
         <span class="gh-label">Gegner</span>
         <ul class="gh-list">
-          <li><i class="pu pu-drone"></i>Qualle · 100</li>
-          <li><i class="pu pu-crab"></i>Krabbler · 250</li>
-          <li><i class="pu pu-beetle"></i>Panzerkäfer · 600</li>
+          <li><i class="pu pu-drone"></i>Jäger · 100</li>
+          <li><i class="pu pu-crab"></i>Abfangjäger · 250</li>
+          <li><i class="pu pu-beetle"></i>Bomber · 600</li>
         </ul>
       </div>
     </div>
     <div class="game-boss" data-hud="boss" aria-hidden="true">
-      <div class="gbo-head"><span>Schwarmkönigin</span><b data-hud="bossPct"></b></div>
+      <div class="gbo-head"><span>Flaggschiff</span><b data-hud="bossPct"></b></div>
       <div class="gbo-bar"><i class="gbo-lag" data-hud="bossLag"></i><i class="gbo-fill" data-hud="bossFill"></i></div>
     </div>
     <div class="game-banner" aria-hidden="true"><span class="gb-sub"></span><span class="gb-title"></span></div>
     <section class="game-card game-start" aria-labelledby="game-title">
       <p class="gc-kicker">Minispiel</p>
       <h2 class="gc-logo" id="game-title"><span>Sternen</span><span>schwarm</span></h2>
-      <p class="gc-text">Der Schwarm greift an. Wie lange hältst du die Stellung?</p>
+      <p class="gc-text">Die Plünderer greifen an. Wie lange hältst du die Stellung?</p>
       <button class="gc-btn gc-primary" type="button" data-act="start">Spielen</button>
       <p class="gc-best" data-hud="titleBest"></p>
       <ul class="gc-keys">

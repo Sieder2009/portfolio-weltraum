@@ -3,9 +3,10 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import { GlowPoints, StreakBatch } from "./fx";
 
 // A space battle in the background, in the look of a "used future": two factions of fighters chase each other in
-// tight loops, weaving and rolling, and shoot (red bolts for the patrol, green for the raiders); hits throw sparks, a
-// ship with too many hits explodes and later jumps back in from hyperspace. Two large ships trade heavy fire further
-// back. The designs are our own (built from simple solids, panels in mismatched shades, soot and markings).
+// tight loops, weaving and rolling, and fire short, bright blaster bolts in twin bursts (red for the patrol, green for
+// the raiders); hits throw sparks, a ship with too many hits explodes and later jumps back in from hyperspace. Two
+// large ships trade heavy fire further back. The designs are our own, built from simple solids: plates in mismatched
+// shades, soot toward the engines, faded markings, dark glass, and on the big ships trenches with rows of windows.
 // On the patrol's side flies the star squadron: one ship for every star the project has on GitHub, in V formations,
 // marked in gold (see setStars).
 //
@@ -13,52 +14,63 @@ import { GlowPoints, StreakBatch } from "./fx";
 // so the battle stays on screen at the overview as well as close to a planet, and still passes behind
 // the planets (it is drawn in the scene with depth).
 
-/** 0: blue-green patrol, 1: ember raiders */
+/** 0: the patrol (light hulls, red bolts), 1: the raiders (grey hulls, green bolts) */
 export type Faction = 0 | 1;
 /** the kind of fighter: 0 patrol, 1 raider, 2 star squadron (on the patrol's side) */
 type Kind = 0 | 1 | 2;
 
-const FIGHTER_LEN = 0.075;
+const FIGHTER_LEN = 0.085;
 const CAPITAL_LEN = 0.62;
-const BOLT_SPEED = 2.7;
-const HEAVY_SPEED = 1.6;
+const BOLT_SPEED = 2.4;
+const HEAVY_SPEED = 1.5;
 const HIT_RADIUS = 0.03;
 const TRAIL_POINTS = 12;
 
 // (by kind: patrol, raider, star squadron) Red bolts for the patrol, green for the raiders, gold for the squadron;
-// warm engines on the patrol's side, cold blue ones on the raiders'.
-const LASER = [new THREE.Color(3.0, 0.3, 0.2), new THREE.Color(0.45, 3.0, 0.5), new THREE.Color(2.9, 2.2, 0.55)];
-const TRAIL = [new THREE.Color(1.2, 0.55, 0.35), new THREE.Color(0.45, 0.7, 1.15), new THREE.Color(1.25, 0.95, 0.4)];
-const ENGINE = [new THREE.Color(3.0, 1.35, 0.85), new THREE.Color(1.3, 1.9, 3.0), new THREE.Color(3.0, 2.3, 1.0)];
-/** where the guns sit, by kind: sideways and forward of the centre (length 1) */
+// warm engines on the patrol's side, cold blue-white ones on the raiders'.
+const LASER = [new THREE.Color(3.4, 0.16, 0.1), new THREE.Color(0.25, 3.3, 0.35), new THREE.Color(3.0, 2.1, 0.4)];
+const TRAIL = [new THREE.Color(1.25, 0.5, 0.35), new THREE.Color(0.5, 0.75, 1.2), new THREE.Color(1.25, 0.95, 0.4)];
+const ENGINE = [new THREE.Color(3.0, 1.15, 0.8), new THREE.Color(1.45, 2.0, 3.0), new THREE.Color(3.0, 2.3, 1.0)];
+/** where the twin guns sit, by kind: sideways (both sides fire together) and forward of the centre (length 1) */
 const GUNS: [number, number][] = [
-  [0.47, 0.06],
-  [0.41, 0.28],
-  [0.44, 0.18],
+  [0.458, 0.42],
+  [0.39, 0.05],
+  [0.442, 0.18],
 ];
 
 // ---------- shapes (built from simple solids, length 1 along +z, nose forward) ----------
 // The look of a "used future": hulls of panels that don't quite match, darker underneath and sooty toward the
-// engines, faded markings, canopies of dark glass; the lights (engines, windows, edges) glow.
+// engines, faded markings, canopies of dark glass; the lights (engines, windows, visors) glow.
 
 type Vec3 = [number, number, number];
 
 const rgb = (r: number, g: number, b: number) => new THREE.Color(r, g, b);
 const HALF_PI = Math.PI / 2;
+const AXIS_X = new THREE.Vector3(1, 0, 0);
+const AXIS_Y = new THREE.Vector3(0, 1, 0);
+const AXIS_Z = new THREE.Vector3(0, 0, 1);
 
 /** the paint of each hull (sRGB) */
 const PAINT = {
-  patrol: new THREE.Color(0xc9c6bb),
-  raider: new THREE.Color(0x4b4d55),
+  patrol: new THREE.Color(0xcdc8ba),
+  raider: new THREE.Color(0x7d838d),
   star: new THREE.Color(0xe4dac6),
-  carrier: new THREE.Color(0xaeaca4),
-  cruiser: new THREE.Color(0x55575f),
+  carrier: new THREE.Color(0xb6b2a8),
+  cruiser: new THREE.Color(0x858b96),
 };
-/** faded markings: red stripes on the patrol, pale ones on the raiders */
-const MARK = { patrol: new THREE.Color(0x9c4434), raider: new THREE.Color(0x9a988c) };
-/** canopies of dark glass, and the dark metal of intakes, barrels and vents */
+/** faded markings: red bands on the patrol, pale ones on the raiders */
+const MARK = { patrol: new THREE.Color(0xa83a2a), raider: new THREE.Color(0xb4b2a9) };
+/** canopies of dark glass, and the dark metal of intakes, barrels, vents and trenches */
 const GLASS = rgb(0.018, 0.024, 0.034);
 const DARK = rgb(0.035, 0.035, 0.04);
+/** lit windows: warm on the patrol's side, cold on the raiders' */
+const WINDOW = { patrol: rgb(1.35, 1.0, 0.62), raider: rgb(0.8, 1.25, 1.6) };
+
+/** Where a point given in a part's own frame lands, for a part turned by `rot` and set at `at` (as in Shape.add). */
+function onPart(local: Vec3, rot: Vec3, at: Vec3): Vec3 {
+  const v = new THREE.Vector3(...local).applyAxisAngle(AXIS_X, rot[0]).applyAxisAngle(AXIS_Y, rot[1]).applyAxisAngle(AXIS_Z, rot[2]);
+  return [v.x + at[0], v.y + at[1], v.z + at[2]];
+}
 
 class Shape {
   private hull: THREE.BufferGeometry[] = [];
@@ -130,6 +142,36 @@ class Shape {
     return this;
   }
 
+  /**
+   * A trench along the hull: a dark channel of `width` between two raised ridges, `length` long, centred at `at`, on
+   * a side wall (face "x") or on the deck (face "y").
+   */
+  trench(at: Vec3, length: number, width: number, face: "x" | "y") {
+    const [x, y, z] = at;
+    const r = 0.005;
+    if (face === "x") {
+      this.add(new THREE.BoxGeometry(0.004, width, length), at, { tint: DARK });
+      for (const d of [-1, 1]) this.add(new THREE.BoxGeometry(0.009, r, length), [x, y + d * (width + r) / 2, z]);
+    } else {
+      this.add(new THREE.BoxGeometry(width, 0.004, length), at, { tint: DARK });
+      for (const d of [-1, 1]) this.add(new THREE.BoxGeometry(r, 0.009, length), [x + d * (width + r) / 2, y, z]);
+    }
+    return this;
+  }
+
+  /** A row of `count` small lit windows, `length` long, centred at `at`, on a side wall (face "x") or the deck ("y"). */
+  windows(at: Vec3, length: number, count: number, glow: THREE.Color, face: "x" | "y" = "x") {
+    const step = length / count;
+    for (let i = 0; i < count; i++) {
+      // (some are dark)
+      if (this.rand() < 0.22) continue;
+      const z = at[2] - length / 2 + step * (i + 0.5);
+      const size: Vec3 = face === "x" ? [0.0045, 0.0055, step * 0.55] : [0.0055, 0.0045, step * 0.55];
+      this.add(new THREE.BoxGeometry(...size), [at[0], at[1], z], { glow });
+    }
+    return this;
+  }
+
   build(length: number) {
     const finish = (parts: THREE.BufferGeometry[], worn: boolean) => {
       const g = mergeGeometries(parts, false)!;
@@ -159,67 +201,88 @@ function wear(g: THREE.BufferGeometry) {
   }
 }
 
-/** Patrol fighter: a long nose, swept wings with cannons at the tips, two engines beside the body, red stripes. */
+/**
+ * Patrol fighter: a long six-sided body with the cockpit in the middle and a red band on the nose, straight wings
+ * that carry an engine nacelle at each tip, a long cannon beside each nacelle.
+ */
 function lanceShape(length = FIGHTER_LEN) {
   const s = new Shape(PAINT.patrol, 11);
-  const engine = rgb(3.0, 1.35, 0.85);
-  s.add(new THREE.CylinderGeometry(0.016, 0.072, 0.6, 8), [0, 0, 0.21], { scale: [1, 1, 0.8], rot: [HALF_PI, 0, 0] });
-  s.add(new THREE.BoxGeometry(0.15, 0.095, 0.42), [0, -0.005, -0.24]);
-  s.add(new THREE.BoxGeometry(0.09, 0.035, 0.34), [0, 0.06, -0.2]);
-  s.add(new THREE.CylinderGeometry(0.005, 0.005, 0.1, 4), [0, 0, 0.55], { rot: [HALF_PI, 0, 0], tint: DARK });
-  s.add(new THREE.SphereGeometry(0.056, 10, 8), [0, 0.048, 0.05], { scale: [1, 0.72, 2.1], tint: GLASS });
-  s.add(new THREE.BoxGeometry(0.008, 0.012, 0.2), [0, 0.087, 0.05]);
-  s.add(new THREE.BoxGeometry(0.12, 0.012, 0.035), [0, 0.072, -0.05], { tint: MARK.patrol });
+  const red = MARK.patrol;
+  const y = -0.006;
+  // the body, the nose band and the sensor tip
+  s.add(new THREE.CylinderGeometry(0.022, 0.07, 0.62, 6), [0, 0, 0.17], { scale: [1, 1, 0.72], rot: [HALF_PI, 0, 0] });
+  s.add(new THREE.BoxGeometry(0.15, 0.1, 0.3), [0, -0.005, -0.27]);
+  s.add(new THREE.BoxGeometry(0.1, 0.04, 0.26), [0, 0.062, -0.23]);
+  s.add(new THREE.CylinderGeometry(0.038, 0.043, 0.05, 6), [0, 0, 0.3], { scale: [1.05, 1, 0.78], rot: [HALF_PI, 0, 0], tint: red });
+  s.add(new THREE.CylinderGeometry(0.005, 0.005, 0.07, 4), [0, 0, 0.5], { rot: [HALF_PI, 0, 0], tint: DARK });
+  // the cockpit: dark glass in a frame, a red band behind it
+  s.add(new THREE.SphereGeometry(0.046, 10, 8), [0, 0.036, 0.07], { scale: [1, 0.7, 2.1], tint: GLASS });
+  s.add(new THREE.BoxGeometry(0.006, 0.008, 0.17), [0, 0.068, 0.06]);
+  s.add(new THREE.BoxGeometry(0.08, 0.008, 0.008), [0, 0.06, 0.02]);
+  s.add(new THREE.BoxGeometry(0.105, 0.012, 0.035), [0, 0.087, -0.13], { tint: red });
+  // a sensor dish and an aerial on the back, a fin below
+  s.add(new THREE.CylinderGeometry(0.03, 0.008, 0.01, 8), [0.025, 0.095, -0.28], { rot: [0.4, 0, 0.3] });
+  s.add(new THREE.CylinderGeometry(0.002, 0.002, 0.08, 3), [-0.03, 0.12, -0.3], { tint: DARK });
+  s.add(new THREE.BoxGeometry(0.014, 0.08, 0.15), [0, -0.08, -0.33], { rot: [0.3, 0, 0] });
   for (const side of [-1, 1]) {
-    s.add(new THREE.BoxGeometry(0.44, 0.02, 0.2), [side * 0.27, -0.008, -0.22], { rot: [0, side * 0.42, 0] });
-    s.add(new THREE.BoxGeometry(0.16, 0.024, 0.045), [side * 0.355, -0.008, -0.257], { rot: [0, side * 0.42, 0], tint: MARK.patrol });
-    s.add(new THREE.CylinderGeometry(0.009, 0.009, 0.36, 5), [side * 0.47, -0.008, -0.12], { rot: [HALF_PI, 0, 0] });
-    s.add(new THREE.CylinderGeometry(0.017, 0.017, 0.09, 6), [side * 0.47, -0.008, -0.26], { rot: [HALF_PI, 0, 0], tint: DARK });
-    s.add(new THREE.CylinderGeometry(0.047, 0.055, 0.34, 10), [side * 0.12, -0.018, -0.31], { rot: [HALF_PI, 0, 0] });
-    s.add(new THREE.TorusGeometry(0.047, 0.01, 4, 12), [side * 0.12, -0.018, -0.14], { tint: DARK });
-    s.add(new THREE.CylinderGeometry(0.039, 0.039, 0.02, 12), [side * 0.12, -0.018, -0.485], { rot: [HALF_PI, 0, 0], glow: engine });
+    const wingRot: Vec3 = [0, side * 0.12, 0];
+    const wingAt: Vec3 = [side * 0.22, y, -0.2];
+    s.add(new THREE.BoxGeometry(0.36, 0.022, 0.17), wingAt, { rot: wingRot });
+    s.add(new THREE.BoxGeometry(0.07, 0.026, 0.175), onPart([side * 0.1, 0, 0], wingRot, wingAt), { rot: wingRot, tint: red });
+    // the nacelle: a dark intake in front, a red band, the nozzle behind
+    const x = side * 0.4;
+    s.add(new THREE.CylinderGeometry(0.05, 0.058, 0.5, 10), [x, y, -0.17], { rot: [HALF_PI, 0, 0] });
+    s.add(new THREE.TorusGeometry(0.05, 0.011, 4, 12), [x, y, 0.08], { tint: DARK });
+    s.add(new THREE.CylinderGeometry(0.04, 0.04, 0.01, 10), [x, y, 0.076], { rot: [HALF_PI, 0, 0], tint: DARK });
+    s.add(new THREE.CylinderGeometry(0.061, 0.061, 0.05, 10), [x, y, -0.03], { rot: [HALF_PI, 0, 0], tint: red });
+    s.add(new THREE.CylinderGeometry(0.052, 0.046, 0.04, 10), [x, y, -0.44], { rot: [HALF_PI, 0, 0], tint: DARK });
+    s.add(new THREE.CylinderGeometry(0.04, 0.04, 0.012, 10), [x, y, -0.455], { rot: [HALF_PI, 0, 0], glow: ENGINE[0] });
+    // the cannon on the outer side of the nacelle
+    s.add(new THREE.BoxGeometry(0.03, 0.032, 0.12), [side * 0.452, y, 0.02]);
+    s.add(new THREE.CylinderGeometry(0.008, 0.008, 0.34, 5), [side * 0.458, y, 0.24], { rot: [HALF_PI, 0, 0] });
+    s.add(new THREE.CylinderGeometry(0.014, 0.014, 0.05, 6), [side * 0.458, y, 0.39], { rot: [HALF_PI, 0, 0], tint: DARK });
   }
-  s.add(new THREE.BoxGeometry(0.014, 0.085, 0.15), [0, -0.085, -0.34], { rot: [0.3, 0, 0] });
-  s.greebles(10, 0.15, 0.095, -0.42, -0.06);
+  s.greebles(10, 0.15, 0.1, -0.41, -0.13);
   return s.build(length);
 }
 
-/** Raider fighter: a faceted pod with a dark canopy, held inside a crescent blade of mismatched plates; cold engine. */
-function crescentShape(length = FIGHTER_LEN) {
+/**
+ * Raider fighter: a flat four-sided dart with a dark faceted canopy and a green visor, a tall fin on its back, two
+ * long wings bent down and swept back with a cannon at each tip, one big cold engine.
+ */
+function dartShape(length = FIGHTER_LEN) {
   const s = new Shape(PAINT.raider, 23);
-  const engine = rgb(1.3, 1.9, 3.0);
-  const arc = 3.5;
-  const parts = 5;
-  s.add(new THREE.IcosahedronGeometry(0.16, 0), [0, 0, 0.02], { scale: [1, 0.75, 1.9] });
-  s.add(new THREE.SphereGeometry(0.075, 10, 8), [0, 0.03, 0.2], { scale: [1.15, 0.62, 1.1], tint: GLASS });
-  s.add(new THREE.BoxGeometry(0.11, 0.008, 0.012), [0, 0.068, 0.24], { glow: rgb(0.45, 1.6, 0.85) });
-  for (let k = 0; k < parts; k++) {
-    const seg = new THREE.TorusGeometry(0.42, 0.04, 4, 5, arc / parts);
-    seg.rotateZ(-HALF_PI - arc / 2 + (k * arc) / parts);
-    seg.rotateX(HALF_PI);
-    s.add(seg, [0, 0, 0], { scale: [1, 1, 0.45], tint: k === 1 || k === parts - 2 ? MARK.raider : undefined });
-  }
-  s.add(new THREE.BoxGeometry(0.03, 0.022, 0.16), [0, 0, -0.36]);
+  s.add(new THREE.CylinderGeometry(0, 0.13, 0.82, 4), [0, 0, 0.07], { scale: [1, 1, 0.55], rot: [HALF_PI, 0, 0] });
+  s.add(new THREE.BoxGeometry(0.15, 0.075, 0.12), [0, 0, -0.36]);
+  s.add(new THREE.CylinderGeometry(0.065, 0.075, 0.07, 8), [0, 0, -0.44], { rot: [HALF_PI, 0, 0], tint: DARK });
+  s.add(new THREE.CylinderGeometry(0.056, 0.056, 0.012, 8), [0, 0, -0.478], { rot: [HALF_PI, 0, 0], glow: ENGINE[1] });
+  // the canopy: dark faceted glass, a narrow green visor
+  s.add(new THREE.SphereGeometry(0.05, 6, 4), [0, 0.03, 0.1], { scale: [0.9, 0.62, 2.2], tint: GLASS });
+  s.add(new THREE.BoxGeometry(0.05, 0.005, 0.01), [0, 0.052, 0.2], { glow: rgb(0.4, 1.7, 0.8) });
+  // the fin, with a pale marking
+  const finRot: Vec3 = [-0.5, 0, 0];
+  const finAt: Vec3 = [0, 0.12, -0.24];
+  s.add(new THREE.BoxGeometry(0.014, 0.2, 0.2), finAt, { rot: finRot });
+  s.add(new THREE.BoxGeometry(0.018, 0.04, 0.14), onPart([0, 0.06, 0], finRot, finAt), { rot: finRot, tint: MARK.raider });
   for (const side of [-1, 1]) {
-    s.add(new THREE.BoxGeometry(0.31, 0.018, 0.03), [side * 0.215, 0, -0.155], { rot: [0, side * 0.74, 0] });
-    s.add(new THREE.BoxGeometry(0.06, 0.03, 0.07), [side * 0.3, 0, -0.23], { rot: [0, side * 0.74, 0], tint: DARK });
-    s.add(new THREE.CylinderGeometry(0.011, 0.011, 0.22, 5), [side * 0.413, 0, 0.17], { rot: [HALF_PI, 0, 0] });
-    s.add(new THREE.CylinderGeometry(0.018, 0.018, 0.05, 6), [side * 0.413, 0, 0.07], { rot: [HALF_PI, 0, 0], tint: DARK });
+    const rot: Vec3 = [0, side * 0.5, -side * 0.45];
+    const at: Vec3 = [side * 0.2, -0.045, -0.17];
+    s.add(new THREE.BoxGeometry(0.42, 0.016, 0.2), at, { rot });
+    s.add(new THREE.BoxGeometry(0.05, 0.02, 0.205), onPart([side * 0.12, 0, 0], rot, at), { rot, tint: MARK.raider });
+    s.add(new THREE.BoxGeometry(0.1, 0.022, 0.06), onPart([side * -0.04, 0, -0.05], rot, at), { rot, tint: DARK });
+    // the cannon at the tip
+    const tip = onPart([side * 0.2, 0, 0.08], rot, at);
+    s.add(new THREE.BoxGeometry(0.03, 0.03, 0.08), tip);
+    s.add(new THREE.CylinderGeometry(0.008, 0.008, 0.22, 5), [tip[0], tip[1], tip[2] + 0.13], { rot: [HALF_PI, 0, 0] });
   }
-  s.add(new THREE.SphereGeometry(0.055, 10, 8), [0, 0, -0.31], { scale: [1, 0.7, 0.5], glow: engine });
-  const edge = new THREE.TorusGeometry(0.39, 0.012, 3, 22, 3.3);
-  edge.rotateZ(-HALF_PI - 1.65);
-  edge.rotateX(HALF_PI);
-  s.add(edge, [0, 0, 0], { glow: rgb(0.3, 1.5, 1.25) });
-  s.greebles(8, 0.2, 0.12, -0.15, 0.12);
+  s.greebles(8, 0.12, 0.06, -0.32, 0.05);
   return s.build(length);
 }
 
-/** Star squadron fighter: an arrowhead with forward-swept wings, gold leading edges and a gold spark on its back. */
+/** Star squadron fighter: an arrowhead with forward-swept wings, gold leading edges and a gold cross on its back. */
 function starShape(length = FIGHTER_LEN) {
   const s = new Shape(PAINT.star, 37);
   const gold = rgb(3.0, 2.15, 0.7);
-  const engine = rgb(3.0, 2.4, 1.2);
   const sweep = 0.5;
   s.add(new THREE.CylinderGeometry(0.015, 0.078, 0.92, 6), [0, 0, 0.04], { scale: [1, 1, 0.72], rot: [HALF_PI, 0, 0] });
   s.add(new THREE.SphereGeometry(0.056, 8, 6), [0, 0.044, 0.1], { scale: [1, 0.7, 2.3], tint: GLASS });
@@ -230,7 +293,7 @@ function starShape(length = FIGHTER_LEN) {
     s.add(new THREE.CylinderGeometry(0.008, 0.008, 0.24, 5), [side * 0.442, -0.01, 0.06], { rot: [HALF_PI, 0, 0] });
     s.add(new THREE.CylinderGeometry(0.042, 0.052, 0.3, 8), [side * 0.085, -0.012, -0.34], { rot: [HALF_PI, 0, 0] });
     s.add(new THREE.TorusGeometry(0.042, 0.009, 4, 12), [side * 0.085, -0.012, -0.19], { tint: DARK });
-    s.add(new THREE.CylinderGeometry(0.038, 0.038, 0.02, 10), [side * 0.085, -0.012, -0.495], { rot: [HALF_PI, 0, 0], glow: engine });
+    s.add(new THREE.CylinderGeometry(0.038, 0.038, 0.02, 10), [side * 0.085, -0.012, -0.495], { rot: [HALF_PI, 0, 0], glow: ENGINE[2] });
   }
   s.add(new THREE.BoxGeometry(0.016, 0.1, 0.17), [0, 0.065, -0.33], { rot: [-0.35, 0, 0] });
   s.add(new THREE.BoxGeometry(0.15, 0.012, 0.026), [0, 0.058, -0.12], { glow: gold });
@@ -239,21 +302,27 @@ function starShape(length = FIGHTER_LEN) {
   return s.build(length);
 }
 
-/** Patrol carrier: a long plated spine with a ring around its middle, a bridge tower, a hangar, five engines. */
+/**
+ * Patrol carrier: a long plated spine with a ring around its middle, trenches with rows of warm windows, a bridge
+ * tower, a hangar, faded red bands and a block of seven engines at the back.
+ */
 function carrierShape() {
   const s = new Shape(PAINT.carrier, 53);
-  const engine = rgb(3.0, 1.35, 0.85);
-  const windows = rgb(1.25, 1.0, 0.65);
+  const red = MARK.patrol;
+  const windows = WINDOW.patrol;
   s.add(new THREE.BoxGeometry(0.12, 0.1, 0.8), [0, 0, 0]);
   s.add(new THREE.ConeGeometry(0.085, 0.24, 4), [0, 0, 0.52], { rot: [HALF_PI, 0, 0] });
   for (let k = 0; k < 8; k++) {
     const seg = new THREE.TorusGeometry(0.17, 0.018, 6, 4, Math.PI / 4);
     seg.rotateZ((k * Math.PI) / 4);
-    s.add(seg, [0, 0, 0.05], { tint: k % 4 === 1 ? MARK.patrol : undefined });
+    s.add(seg, [0, 0, 0.05], { tint: k % 4 === 1 ? red : undefined });
   }
   s.add(new THREE.BoxGeometry(0.34, 0.015, 0.02), [0, 0, 0.05]);
   s.add(new THREE.BoxGeometry(0.015, 0.34, 0.02), [0, 0, 0.05]);
+  // the engine block, with a red band
   s.add(new THREE.BoxGeometry(0.24, 0.15, 0.16), [0, 0, -0.42]);
+  s.add(new THREE.BoxGeometry(0.246, 0.156, 0.03), [0, 0, -0.37], { tint: red });
+  // the bridge tower
   s.add(new THREE.BoxGeometry(0.05, 0.08, 0.1), [0, 0.09, -0.25]);
   s.add(new THREE.BoxGeometry(0.12, 0.025, 0.05), [0, 0.135, -0.25]);
   s.add(new THREE.BoxGeometry(0.1, 0.004, 0.006), [0, 0.135, -0.2245], { glow: windows });
@@ -261,27 +330,37 @@ function carrierShape() {
   s.add(new THREE.CylinderGeometry(0.002, 0.002, 0.09, 3), [-0.035, 0.19, -0.26], { tint: DARK });
   s.add(new THREE.SphereGeometry(0.022, 8, 6), [0, 0.055, 0.22], { scale: [1, 0.6, 1] });
   s.add(new THREE.SphereGeometry(0.022, 8, 6), [0, -0.055, 0.02], { scale: [1, 0.6, 1] });
+  // a trench along the deck
+  s.trench([0, 0.051, 0.17], 0.36, 0.026, "y");
+  s.windows([0, 0.052, 0.17], 0.34, 14, windows, "y");
   for (const side of [-1, 1]) {
+    // the hangar pods
     s.add(new THREE.BoxGeometry(0.05, 0.06, 0.35), [side * 0.085, -0.01, -0.05]);
-    s.add(new THREE.BoxGeometry(0.003, 0.007, 0.55), [side * 0.0615, 0.022, 0.08], { glow: windows });
-    s.add(new THREE.BoxGeometry(0.003, 0.007, 0.3), [side * 0.111, 0.0, -0.05], { glow: windows });
-    s.add(new THREE.TorusGeometry(0.17, 0.007, 4, 28), [0, 0, 0.05 + side * 0.02], { glow: rgb(1.1, 0.55, 0.35) });
+    s.windows([side * 0.111, 0.0, -0.05], 0.3, 12, windows);
     s.add(new THREE.BoxGeometry(0.004, 0.035, 0.08), [side * 0.0615, -0.01, 0.25], { glow: rgb(1.5, 1.05, 0.6) });
+    // a trench with two rows of windows along each side of the spine, a red stripe below it
+    s.trench([side * 0.0615, 0.034, 0.12], 0.52, 0.02, "x");
+    s.windows([side * 0.0625, 0.039, 0.12], 0.5, 24, windows);
+    s.windows([side * 0.0625, 0.029, 0.12], 0.5, 24, windows);
+    s.add(new THREE.BoxGeometry(0.004, 0.01, 0.2), [side * 0.0615, -0.038, 0.27], { tint: red });
+    s.add(new THREE.TorusGeometry(0.17, 0.007, 4, 28), [0, 0, 0.05 + side * 0.02], { glow: rgb(1.1, 0.55, 0.35) });
   }
-  for (const [x, y] of CARRIER_NOZZLES) {
-    s.add(new THREE.CylinderGeometry(0.03, 0.034, 0.03, 10), [x, y, -0.51], { rot: [HALF_PI, 0, 0], tint: DARK });
-    s.add(new THREE.CylinderGeometry(0.026, 0.026, 0.01, 10), [x, y, -0.528], { rot: [HALF_PI, 0, 0], glow: engine });
+  for (const [x, y, r] of CARRIER_NOZZLES) {
+    s.add(new THREE.CylinderGeometry(r + 0.006, r + 0.009, 0.035, 10), [x, y, -0.512], { rot: [HALF_PI, 0, 0], tint: DARK });
+    s.add(new THREE.CylinderGeometry(r, r, 0.01, 10), [x, y, -0.53], { rot: [HALF_PI, 0, 0], glow: ENGINE[0] });
   }
   s.plates(46, 0.12, 0.1, -0.34, 0.4);
   s.greebles(30, 0.12, 0.1, -0.34, 0.38);
   return s.build(CAPITAL_LEN);
 }
 
-/** Raider cruiser: a block hull behind a wide front bar with turrets, a command tower, a bank of cold engines. */
+/**
+ * Raider cruiser: a block hull behind a wide front bar with turrets, decks stepping up to a command tower, trenches
+ * with rows of cold windows, and a bank of cold engines.
+ */
 function hammerShape() {
   const s = new Shape(PAINT.cruiser, 71);
-  const engine = rgb(1.3, 1.9, 3.0);
-  const windows = rgb(0.5, 1.3, 1.25);
+  const windows = WINDOW.raider;
   s.add(new THREE.BoxGeometry(0.16, 0.11, 0.7), [0, 0, -0.05]);
   s.add(new THREE.BoxGeometry(0.5, 0.07, 0.12), [0, 0, 0.36]);
   s.add(new THREE.BoxGeometry(0.12, 0.05, 0.4), [0, 0.075, -0.1]);
@@ -291,41 +370,53 @@ function hammerShape() {
   s.add(new THREE.BoxGeometry(0.085, 0.004, 0.004), [0, 0.205, -0.2185], { glow: windows });
   s.add(new THREE.BoxGeometry(0.4, 0.004, 0.003), [0, 0, 0.4215], { glow: rgb(0.5, 1.6, 1.1) });
   s.add(new THREE.BoxGeometry(0.1, 0.06, 0.008), [0, 0, -0.404], { tint: DARK });
+  // a keel below, a trench along the upper deck
+  s.add(new THREE.BoxGeometry(0.06, 0.03, 0.5), [0, -0.07, -0.02]);
+  s.trench([0, 0.101, 0.0], 0.18, 0.03, "y");
+  s.windows([0, 0.102, 0.0], 0.16, 8, windows, "y");
   for (const side of [-1, 1]) {
     s.add(new THREE.BoxGeometry(0.08, 0.1, 0.16), [side * 0.25, 0, 0.36], { tint: side < 0 ? MARK.raider : undefined });
     s.add(new THREE.CylinderGeometry(0.04, 0.05, 0.3, 8), [side * 0.12, -0.02, -0.3], { rot: [HALF_PI, 0, 0] });
-    s.add(new THREE.BoxGeometry(0.003, 0.006, 0.5), [side * 0.0815, 0.02, -0.05], { glow: windows });
-    s.add(new THREE.BoxGeometry(0.003, 0.005, 0.3), [side * 0.0615, 0.075, -0.1], { glow: windows });
+    // trenches with windows along the hull and the deck above it
+    s.trench([side * 0.0815, 0.02, -0.02], 0.56, 0.024, "x");
+    s.windows([side * 0.0825, 0.026, -0.02], 0.54, 26, windows);
+    s.windows([side * 0.0825, 0.014, -0.02], 0.54, 26, windows);
+    s.windows([side * 0.0615, 0.075, -0.1], 0.36, 16, windows);
+    s.windows([side * 0.0415, 0.115, -0.2], 0.18, 8, windows);
+    s.windows([side * 0.2915, 0.01, 0.36], 0.14, 6, windows);
+    // turrets on the front bar
     s.add(new THREE.CylinderGeometry(0.018, 0.022, 0.016, 8), [side * 0.17, 0.043, 0.36]);
     s.add(new THREE.CylinderGeometry(0.003, 0.003, 0.05, 4), [side * 0.17, 0.05, 0.385], { rot: [HALF_PI, 0, 0], tint: DARK });
   }
-  for (const [x, y] of CRUISER_NOZZLES) {
-    if (Math.abs(x) < 0.1) s.add(new THREE.CylinderGeometry(0.034, 0.038, 0.06, 10), [x, y, -0.43], { rot: [HALF_PI, 0, 0], tint: DARK });
-    s.add(new THREE.CylinderGeometry(0.032, 0.032, 0.02, 10), [x, y, -0.462], { rot: [HALF_PI, 0, 0], glow: engine });
+  for (const [x, y, r] of CRUISER_NOZZLES) {
+    if (Math.abs(x) < 0.1) s.add(new THREE.CylinderGeometry(r + 0.002, r + 0.006, 0.06, 10), [x, y, -0.43], { rot: [HALF_PI, 0, 0], tint: DARK });
+    s.add(new THREE.CylinderGeometry(r, r, 0.02, 10), [x, y, -0.462], { rot: [HALF_PI, 0, 0], glow: ENGINE[1] });
   }
   s.plates(50, 0.16, 0.11, -0.36, 0.26);
   s.greebles(34, 0.16, 0.11, -0.36, 0.26);
   return s.build(CAPITAL_LEN);
 }
 
-/** the engine nozzles at the back of the two big ships (x, y; length 1) */
-const CARRIER_NOZZLES: [number, number][] = [
-  [-0.07, -0.035],
-  [0.07, -0.035],
-  [0, 0],
-  [-0.07, 0.035],
-  [0.07, 0.035],
+/** the engine nozzles at the back of the two big ships (x, y, radius; length 1) */
+const CARRIER_NOZZLES: Vec3[] = [
+  [0, 0, 0.03],
+  [-0.075, 0, 0.03],
+  [0.075, 0, 0.03],
+  [-0.0375, 0.052, 0.016],
+  [0.0375, 0.052, 0.016],
+  [-0.0375, -0.052, 0.016],
+  [0.0375, -0.052, 0.016],
 ];
-const CRUISER_NOZZLES: [number, number][] = [
-  [-0.12, -0.02],
-  [0.12, -0.02],
-  [-0.05, 0.022],
-  [0.05, 0.022],
-  [0, -0.03],
+const CRUISER_NOZZLES: Vec3[] = [
+  [-0.12, -0.02, 0.032],
+  [0.12, -0.02, 0.032],
+  [-0.05, 0.022, 0.022],
+  [0.05, 0.022, 0.022],
+  [0, -0.03, 0.026],
 ];
 
 const hullMaterial = (kind: Kind) =>
-  new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: kind === 1 ? 0.55 : 0.5, metalness: kind === 1 ? 0.42 : 0.3 });
+  new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: kind === 1 ? 0.55 : 0.5, metalness: kind === 1 ? 0.32 : 0.28 });
 
 // ---------- the battle ----------
 
@@ -360,7 +451,6 @@ interface Fighter {
   cooldown: number;
   shots: number;
   pause: number;
-  side: number;
   roll: number;
   rollWait: number;
   wobble: THREE.Vector3;
@@ -376,7 +466,8 @@ interface Capital {
   phase: number;
   axis: THREE.Vector3;
   turrets: THREE.Vector3[];
-  engines: THREE.Vector3[];
+  /** the nozzles at the back: where they glow, and how large */
+  engines: { p: THREE.Vector3; size: number }[];
   cooldown: number;
 }
 
@@ -489,7 +580,6 @@ export class Fleet {
           cooldown: this.rand(),
           shots: 4,
           pause: this.rand() * 1.5,
-          side: 1,
           roll: 0,
           rollWait: 2 + this.rand() * 4,
           wobble: new THREE.Vector3(this.rand() * 6.28, this.rand() * 6.28, this.rand() * 6.28),
@@ -522,7 +612,7 @@ export class Fleet {
 
     const hullMaterials = [hullMaterial(0), hullMaterial(1), hullMaterial(2)];
     const glowMaterial = new THREE.MeshBasicMaterial({ vertexColors: true });
-    const fighterShapes = [lanceShape(), crescentShape(), starShape()];
+    const fighterShapes = [lanceShape(), dartShape(), starShape()];
     for (const kind of [0, 1, 2] as const) {
       const n = kind === 2 ? this.starCapacity : Math.max(1, slots[kind]);
       const hull = new THREE.InstancedMesh(fighterShapes[kind].hull, hullMaterials[kind], n);
@@ -542,13 +632,13 @@ export class Fleet {
         base: [-1.95, 0.5, -2.3],
         yaw: HALF_PI - 0.42,
         turrets: [[0, 0.06, 0.22], [0, 0.06, -0.08], [0, -0.06, 0.02], [0.08, 0, 0.3]],
-        engines: CARRIER_NOZZLES.map(([x, y]) => [x, y, -0.54] as Vec3),
+        engines: CARRIER_NOZZLES.map(([x, y, r]) => [x, y, r] as Vec3),
       },
       {
         base: [2.05, -0.38, -2.7],
         yaw: -HALF_PI + 0.42,
         turrets: [[0, 0.14, -0.12], [0.17, 0.06, 0.4], [-0.17, 0.06, 0.4], [0, -0.07, 0.0]],
-        engines: CRUISER_NOZZLES.map(([x, y]) => [x, y, -0.475] as Vec3),
+        engines: CRUISER_NOZZLES.map(([x, y, r]) => [x, y, r] as Vec3),
       },
     ];
     capitalDefs.forEach((def, i) => {
@@ -567,12 +657,13 @@ export class Fleet {
         phase: i * 2.1,
         axis: new THREE.Vector3(),
         turrets: def.turrets.map((t) => new THREE.Vector3(...t).multiplyScalar(CAPITAL_LEN)),
-        engines: def.engines.map((t) => new THREE.Vector3(...t).multiplyScalar(CAPITAL_LEN)),
+        // (the glow sits just behind each nozzle, a little larger than it)
+        engines: def.engines.map(([x, y, r]) => ({ p: new THREE.Vector3(x, y, i ? -0.475 : -0.545).multiplyScalar(CAPITAL_LEN), size: r * CAPITAL_LEN * 4.4 })),
         cooldown: 0.5 + this.rand() * 1.5,
       });
     });
 
-    for (let i = 0; i < 160; i++) {
+    for (let i = 0; i < 240; i++) {
       this.bolts.push({
         alive: false,
         p: new THREE.Vector3(),
@@ -604,8 +695,8 @@ export class Fleet {
 
     // (room for every fighter there can be, the star squadron at full strength included)
     const fighters = this.fighters.length + this.starCapacity;
-    this.trailBatch = new StreakBatch(fighters * TRAIL_POINTS, { minPx: 1.2 });
-    this.boltBatch = new StreakBatch(this.bolts.length + fighters, { core: 1.2, minPx: 1.6 });
+    this.trailBatch = new StreakBatch(fighters * TRAIL_POINTS * 2, { minPx: 1.2 });
+    this.boltBatch = new StreakBatch(this.bolts.length + fighters, { core: 1.5, minPx: 1.8 });
     this.glows = new GlowPoints(this.particles.length + fighters * 2 + 12, { minPx: 2 });
     this.group.add(this.trailBatch.mesh, this.boltBatch.mesh, this.glows.points);
   }
@@ -652,7 +743,7 @@ export class Fleet {
       kind: 2,
       slot: i,
       star: i + 1,
-      offset: new THREE.Vector3(side * row * 0.085, row * 0.012, -row * 0.075),
+      offset: new THREE.Vector3(side * row * 1.15, row * 0.16, -row).multiplyScalar(FIGHTER_LEN),
       chain: this.starChains[flight % this.starChains.length],
       lag: Math.floor(flight / this.starChains.length) * 0.55,
       alive: true,
@@ -666,7 +757,6 @@ export class Fleet {
       cooldown: this.rand(),
       shots: 4,
       pause: this.rand() * 1.5,
-      side: 1,
       roll: 0,
       rollWait: 5 + this.rand() * 8,
       wobble: new THREE.Vector3(this.rand() * 6.28, this.rand() * 6.28, this.rand() * 6.28),
@@ -875,15 +965,16 @@ export class Fleet {
     dir.y += (this.rand() - 0.5) * 0.05;
     dir.z += (this.rand() - 0.5) * 0.05;
     dir.normalize();
-    // (twin guns: left and right in turn)
+    // (twin guns: both sides fire together)
     const [gx, gz] = GUNS[f.kind];
-    const gun = this.tmp3.copy(f.left).multiplyScalar(f.side * gx * FIGHTER_LEN).addScaledVector(f.fwd, gz * FIGHTER_LEN).add(f.pos);
-    f.side = -f.side;
-    this.spawnBolt(gun, dir, f.faction, false, LASER[f.kind]);
-    this.spawnParticle(gun, this.tmp.set(0, 0, 0), 0.07, 0.022, 0, 0, LASER[f.kind], 0.8, true);
-    f.cooldown = 0.1 + this.rand() * 0.07;
+    for (const side of [-1, 1]) {
+      const gun = this.tmp3.copy(f.left).multiplyScalar(side * gx * FIGHTER_LEN).addScaledVector(f.fwd, gz * FIGHTER_LEN).add(f.pos);
+      this.spawnBolt(gun, dir, f.faction, false, LASER[f.kind]);
+      this.spawnParticle(gun, this.pv.set(0, 0, 0), 0.06, 0.02, 0, 0, LASER[f.kind], 0.8, true);
+    }
+    f.cooldown = 0.15 + this.rand() * 0.1;
     if (--f.shots <= 0) {
-      f.shots = 3 + Math.floor(this.rand() * 6);
+      f.shots = 2 + Math.floor(this.rand() * 4);
       f.pause = 0.35 + this.rand() * 1.0;
     }
   }
@@ -929,9 +1020,10 @@ export class Fleet {
     b.prev.copy(from);
     b.dir.copy(dir);
     b.speed = heavy ? HEAVY_SPEED : BOLT_SPEED;
-    b.life = heavy ? 4 : 0.55;
-    b.len = heavy ? 0.3 : 0.11;
-    b.width = heavy ? 0.02 : 0.0075;
+    // (short, thick bolts with a white-hot core)
+    b.life = heavy ? 4 : 0.62;
+    b.len = heavy ? 0.24 : 0.075;
+    b.width = heavy ? 0.022 : 0.0105;
     b.faction = faction;
     b.heavy = heavy;
   }
@@ -1110,25 +1202,30 @@ export class Fleet {
       const c = ENGINE[f.kind];
       for (const e of ENGINES[f.kind]) {
         const p = this.tmp.copy(e).multiplyScalar(FIGHTER_LEN).applyQuaternion(f.quat).add(f.pos);
-        this.glows.push(p.x, p.y, p.z, c.r, c.g, c.b, flicker * grow, f.kind === 1 ? 0.04 : 0.028);
+        this.glows.push(p.x, p.y, p.z, c.r, c.g, c.b, flicker * grow, ENGINE_SIZE[f.kind]);
       }
 
-      // trail: from the engine back along the recent path
-      const head = this.enginePoint(f, this.tmp);
-      let px = head.x;
-      let py = head.y;
-      let pz = head.z;
-      const n = f.trailCount;
-      for (let i = 0; i < n; i++) {
-        const x = f.trail[i * 3];
-        const y = f.trail[i * 3 + 1];
-        const z = f.trail[i * 3 + 2];
-        const a0 = 1 - i / TRAIL_POINTS;
-        const a1 = 1 - (i + 1) / TRAIL_POINTS;
-        this.trailBatch.push(px, py, pz, x, y, z, TRAIL[f.kind], 0.5 * a0 * grow, 0.013 * a0 + 0.002, 0.013 * a1 + 0.002, a1 / Math.max(a0, 1e-3));
-        px = x;
-        py = y;
-        pz = z;
+      // trails: back along the recent path (kept for the middle of the stern, shifted out to each engine)
+      const offsets = TRAILS[f.kind];
+      const w = offsets.length > 1 ? 0.01 : 0.013;
+      for (const ox of offsets) {
+        const shift = this.tmp2.copy(f.left).multiplyScalar(ox * FIGHTER_LEN);
+        const head = this.enginePoint(f, this.tmp).add(shift);
+        let px = head.x;
+        let py = head.y;
+        let pz = head.z;
+        const n = f.trailCount;
+        for (let i = 0; i < n; i++) {
+          const x = f.trail[i * 3] + shift.x;
+          const y = f.trail[i * 3 + 1] + shift.y;
+          const z = f.trail[i * 3 + 2] + shift.z;
+          const a0 = 1 - i / TRAIL_POINTS;
+          const a1 = 1 - (i + 1) / TRAIL_POINTS;
+          this.trailBatch.push(px, py, pz, x, y, z, TRAIL[f.kind], 0.5 * a0 * grow, w * a0 + 0.002, w * a1 + 0.002, a1 / Math.max(a0, 1e-3));
+          px = x;
+          py = y;
+          pz = z;
+        }
       }
     }
     for (const m of this.meshes) {
@@ -1139,8 +1236,8 @@ export class Fleet {
     for (const c of this.capitals) {
       const col = ENGINE[c.faction];
       for (const e of c.engines) {
-        const p = this.tmp.copy(e).applyQuaternion(c.group.quaternion).add(c.group.position);
-        this.glows.push(p.x, p.y, p.z, col.r, col.g, col.b, 0.9 + 0.1 * Math.sin(t * 13 + e.x * 50), 0.075);
+        const p = this.tmp.copy(e.p).applyQuaternion(c.group.quaternion).add(c.group.position);
+        this.glows.push(p.x, p.y, p.z, col.r, col.g, col.b, 0.9 + 0.1 * Math.sin(t * 13 + e.p.x * 50), e.size);
       }
     }
 
@@ -1148,7 +1245,7 @@ export class Fleet {
       if (!b.alive) continue;
       const tail = this.tmp.copy(b.p).addScaledVector(b.dir, -b.len);
       const fade = Math.min(1, b.life / 0.12);
-      this.boltBatch.push(b.p.x, b.p.y, b.p.z, tail.x, tail.y, tail.z, b.color, fade * (b.heavy ? 1.3 : 1), b.width, b.width * 0.7, 0.55);
+      this.boltBatch.push(b.p.x, b.p.y, b.p.z, tail.x, tail.y, tail.z, b.color, fade * (b.heavy ? 1.3 : 1), b.width, b.width * 0.85, 0.8);
     }
 
     for (const q of this.particles) {
@@ -1173,12 +1270,14 @@ const EMBER = new THREE.Color(1.3, 0.32, 0.08);
 const RING_BLUE = new THREE.Color(1.0, 1.6, 2.6);
 const RING_EMBER = new THREE.Color(2.4, 1.3, 0.6);
 const ARRIVE = new THREE.Color(1.6, 2.0, 2.8);
-const LANCE_ENGINES = [new THREE.Vector3(-0.11, -0.01, -0.53), new THREE.Vector3(0.11, -0.01, -0.53)];
-const CRESCENT_ENGINES = [new THREE.Vector3(0, 0, -0.36)];
+const LANCE_ENGINES = [new THREE.Vector3(-0.4, -0.006, -0.48), new THREE.Vector3(0.4, -0.006, -0.48)];
+const DART_ENGINES = [new THREE.Vector3(0, 0, -0.5)];
 const STAR_ENGINES = [new THREE.Vector3(-0.085, -0.012, -0.53), new THREE.Vector3(0.085, -0.012, -0.53)];
-/** (by kind) where the engines glow, and where the trail starts */
-const ENGINES = [LANCE_ENGINES, CRESCENT_ENGINES, STAR_ENGINES];
-const ENGINE_POINT = [new THREE.Vector3(0, -0.01, -0.5), new THREE.Vector3(0, 0, -0.33), new THREE.Vector3(0, -0.012, -0.5)];
+/** (by kind) where the engines glow and how large, where the trail starts, and how far out to the sides it runs */
+const ENGINES = [LANCE_ENGINES, DART_ENGINES, STAR_ENGINES];
+const ENGINE_SIZE = [0.034, 0.046, 0.028];
+const ENGINE_POINT = [new THREE.Vector3(0, -0.006, -0.47), new THREE.Vector3(0, 0, -0.48), new THREE.Vector3(0, -0.012, -0.5)];
+const TRAILS = [[-0.4, 0.4], [0], [0]];
 
 /** squared distance from point p to the segment a–b */
 function segmentDistanceSq(p: THREE.Vector3, a: THREE.Vector3, b: THREE.Vector3, tmp: THREE.Vector3) {

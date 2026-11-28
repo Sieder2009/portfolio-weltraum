@@ -145,9 +145,16 @@ Ton ist standardmäßig aus und lässt sich oben rechts einschalten (die Klänge
   Schwelle steht in `src/three/universe.ts` (`updateWarp`).
 - **Raumschlacht:** Zwei Fraktionen mit eigenen Jäger- und Großkampfschiff-Entwürfen kämpfen im Hintergrund
   (`src/three/fleet.ts`), im Stil einer „gebrauchten Zukunft“: Rümpfe aus Platten in leicht unterschiedlichen
-  Tönen, verrußt zu den Triebwerken hin, verblichene Markierungen (rote Streifen bei der Patrouille), Cockpits aus
-  dunklem Glas. Die Patrouille schießt rot, die Plünderer grün; die Jäger hängen sich eng an den Gegner, weichen in
-  Schlangenlinien aus und rollen öfter. Zeigt man auf ein Schiff, läuft der Kampf langsamer.
+  Tönen, verrußt zu den Triebwerken hin, verblichene Markierungen, Cockpits aus dunklem Glas.
+  - Die **Patrouille** fliegt helle Jäger mit einer Triebwerksgondel an jeder Flügelspitze, langen Kanonen und roten
+    Bändern; warme Triebwerke, zwei Abgasspuren.
+  - Die **Plünderer** fliegen graue Pfeil-Jäger mit Rückenflosse, nach unten gebogenen Flügeln und grünem Visier;
+    kalte, blauweiße Triebwerke.
+  - Großkampfschiffe: der Träger der Patrouille (Ring um die Mitte, sieben Düsen) und der Kreuzer der Plünderer
+    (Hammerkopf mit Geschütztürmen, Decks bis zum Kommandoturm). Beide haben Gräben mit Fensterreihen.
+  - Alle Jäger feuern kurze, dicke Blasterbolzen mit weißem Kern, immer aus beiden Kanonen zugleich: die Patrouille
+    rot, die Plünderer grün. Die Jäger hängen sich eng an den Gegner, weichen in Schlangenlinien aus und rollen öfter.
+  - Zeigt man auf ein Schiff, läuft der Kampf langsamer.
 - **Sternenstaffel:** Jeder Stern, den das Repository auf GitHub bekommt, schickt ein Schiff in die Schlacht: eigene
   Jäger mit goldenen Markierungen, in V-Formationen zu fünft, auf der Seite der Patrouille (bis zu 20 Schiffe, auf
   Handys 10). Die Zahl kommt von der öffentlichen GitHub-API (ohne Login), beim Start und dann alle zwei Minuten,
@@ -156,8 +163,14 @@ Ton ist standardmäßig aus und lässt sich oben rechts einschalten (die Klänge
   dort „GitHub-Stern Nr. …“. Welches Repository zählt, steht in `src/ui/stargazers.ts` (`STAR_REPO`).
   Hinweis zum Datenschutz: Dafür fragt der Browser der Besucher direkt bei `api.github.com` an (liegt die Seite
   ohnehin auf GitHub Pages, sieht GitHub die Besuche sowieso).
-- **Minispiel:** `src/game/shooter.ts`, ein Weltraum-Shooter mit Alien-Wellen, Power-ups und einer Schwarmkönigin
-  in jeder fünften Welle. Wird erst beim Öffnen nachgeladen; der Rekord wird im Browser gespeichert.
+- **Minispiel:** `src/game/shooter.ts`, ein Weltraum-Shooter mit Power-ups. Schiffe und Farben entsprechen der
+  Schlacht im Hintergrund:
+  - Du fliegst einen Jäger der Patrouille (rote Zwillingsbolzen, warme Triebwerke).
+  - Die Plünderer greifen in Wellen an: Jäger, Abfangjäger und Bomber, mit grünen Bolzen; die Bomber schießen
+    Rauten.
+  - In jeder fünften Welle kommt ihr Flaggschiff, mit einem Geschützturm, der dir folgt; schwer getroffen brennt es.
+  - Die Anzeigen sind bernsteinfarben wie ein Zielcomputer.
+  - Das Spiel wird erst beim Öffnen nachgeladen, der Rekord wird im Browser gespeichert.
 
 Mit „Bewegung reduzieren“ gibt es kein Intro, keinen Hyperraum und keine Schlacht; das Spiel bleibt über das
 Menü („Minispiel“) und auf dem Desktop über den Link im Hero erreichbar.
